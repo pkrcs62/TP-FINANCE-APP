@@ -428,6 +428,188 @@
     font-size:.74rem;color:var(--muted-dim);
     display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;
   }
+
+  /* Responsive tuning */
+  html, body{width:100%;overflow-x:hidden;}
+  img, svg, video, canvas{max-width:100%;height:auto;}
+  #recentActivity,
+  #investorListWrap,
+  #combinedLedgerWrap,
+  #profAccountsWrap,
+  #profLedger,
+  #ledgerWrap{
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  @media (max-width: 900px){
+    .wrap{padding:0 .9rem;}
+    .metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .card{padding:1.1rem 1rem;}
+    .investor-header,
+    .search-bar,
+    .btn-row{
+      flex-direction:column;
+      align-items:stretch;
+    }
+    .search-bar input,
+    .search-bar button,
+    .btn-row .btn{
+      width:100%;
+    }
+    .account-option{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+    .account-option .a-val{
+      width:100%;
+      text-align:left;
+    }
+  }
+
+  @media (max-width: 760px){
+    header.masthead .row{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+    header.masthead h1{
+      font-size:1.18rem;
+      line-height:1.2;
+      flex-wrap:wrap;
+    }
+    .asof{
+      width:auto;
+      font-size:.68rem;
+    }
+    nav.tabs,
+    nav.subtabs{
+      flex-wrap:nowrap;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    nav.tabs::-webkit-scrollbar,
+    nav.subtabs::-webkit-scrollbar{
+      display:none;
+    }
+    nav.tabs button,
+    nav.subtabs button{
+      flex:0 0 auto;
+      white-space:nowrap;
+    }
+    .field-row{
+      grid-template-columns:1fr;
+      gap:.75rem;
+    }
+    .preview-box{
+      padding:.9rem .85rem;
+    }
+
+    /* Stack table content into readable cards */
+    table.ledger{
+      width:100%;
+      min-width:0;
+      border-collapse:separate;
+      border-spacing:0 .75rem;
+      font-size:.85rem;
+    }
+    table.ledger thead{
+      display:none;
+    }
+    table.ledger tbody{
+      display:block;
+    }
+    table.ledger tr{
+      display:block;
+      background:var(--bg-elev);
+      border:1px solid var(--border);
+      border-radius:var(--r-md);
+      overflow:hidden;
+      box-shadow:0 1px 2px rgba(19,32,39,.04);
+      margin:0;
+    }
+    table.ledger td{
+      display:flex;
+      justify-content:space-between;
+      gap:1rem;
+      align-items:flex-start;
+      padding:.62rem .75rem;
+      border-bottom:1px solid var(--border);
+      text-align:left;
+      white-space:normal;
+      word-break:break-word;
+    }
+    table.ledger td:last-child{
+      border-bottom:none;
+    }
+    table.ledger td::before{
+      content:attr(data-label);
+      flex:0 0 42%;
+      font-size:.68rem;
+      line-height:1.35;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:var(--muted-dim);
+      font-family:var(--sans);
+      font-weight:700;
+    }
+    table.ledger td.num{
+      text-align:left;
+    }
+    table.ledger td.num::before{
+      text-align:left;
+    }
+    table.ledger td.name-cell{
+      font-family:var(--sans);
+      font-weight:700;
+    }
+    table.ledger tr.ledger-total{
+      border-color:var(--mint);
+      box-shadow:0 0 0 1px rgba(15,184,148,.08), 0 1px 2px rgba(19,32,39,.04);
+    }
+    table.ledger tr.ledger-total td{
+      background:rgba(15,184,148,.03);
+    }
+    table.ledger tr.ledger-total td::before{
+      color:var(--mint-deep);
+    }
+    .txn-actions{
+      justify-content:flex-start;
+      flex-wrap:wrap;
+    }
+    .txn-action-btn{
+      width:30px;height:30px;
+    }
+    .modal-overlay{
+      padding:1rem;
+      align-items:flex-end;
+    }
+    .modal{
+      max-width:100%;
+      width:100%;
+      padding:1.1rem;
+    }
+  }
+
+  @media (max-width: 420px){
+    .wrap{padding:0 .65rem;}
+    .metrics{grid-template-columns:1fr;}
+    .card{padding:.95rem .85rem;}
+    .card h2{
+      font-size:1rem;
+    }
+    .metric .value{
+      font-size:1.15rem;
+    }
+    button.btn{
+      width:100%;
+    }
+    .btn-row .btn{
+      width:100%;
+    }
+  }
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -1025,12 +1207,12 @@ function renderDashboard(){
     const inv = state.investors.find(i=> String(i.id)===String(t.investorId));
     const acc = state.accounts.find(a=> String(a.id)===String(t.accountId));
     return `<tr>
-      <td>${fmtDate(t.txnDate)}</td>
-      <td class="name-cell">${inv ? inv.name : t.investorId}</td>
-      <td>${acc ? acc.accountNo : ''}</td>
-      <td><span class="tag ${txnTagClass(t.txnType)}">${t.txnType.replace('_',' ')}</span></td>
-      <td class="num">${fmtMoney(Number(t.amount))}</td>
-      <td class="num">${fmtMoney(Number(t.balanceAfter))}</td>
+      <td data-label="Date">${fmtDate(t.txnDate)}</td>
+      <td data-label="Investor" class="name-cell">${inv ? inv.name : t.investorId}</td>
+      <td data-label="Account">${acc ? acc.accountNo : ''}</td>
+      <td data-label="Type"><span class="tag ${txnTagClass(t.txnType)}">${t.txnType.replace('_',' ')}</span></td>
+      <td data-label="Amount" class="num">${fmtMoney(Number(t.amount))}</td>
+      <td data-label="Balance After" class="num">${fmtMoney(Number(t.balanceAfter))}</td>
     </tr>`;
   }).join('') + '</tbody></table>';
 }
@@ -1063,12 +1245,12 @@ function renderInvestorList(){
     const accs = state.accounts.filter(a=> String(a.investorId)===String(inv.id) && a.status==='ACTIVE');
     const totalValue = accs.reduce((s,a)=> s + Number(a.currentValue||0), 0);
     return `<tr class="row-link" data-investor-id="${inv.id}">
-      <td>${inv.id}</td>
-      <td class="name-cell">${inv.name}</td>
-      <td>${inv.mobile||''}</td>
-      <td class="num">${accs.length}</td>
-      <td class="num">${fmtMoney(totalValue)}</td>
-      <td><span class="tag ${inv.status==='ACTIVE'?'active':'inactive'}">${inv.status}</span></td>
+      <td data-label="ID">${inv.id}</td>
+      <td data-label="Name" class="name-cell">${inv.name}</td>
+      <td data-label="Mobile">${inv.mobile||''}</td>
+      <td data-label="Accounts" class="num">${accs.length}</td>
+      <td data-label="Total Value" class="num">${fmtMoney(totalValue)}</td>
+      <td data-label="Status"><span class="tag ${inv.status==='ACTIVE'?'active':'inactive'}">${inv.status}</span></td>
     </tr>`;
   }).join('') + '</tbody></table>';
 
@@ -1107,14 +1289,14 @@ function renderCombinedLedger(){
     const inv = state.investors.find(i=> String(i.id)===String(t.investorId));
     const acc = state.accounts.find(a=> String(a.id)===String(t.accountId));
     return `<tr class="row-link" data-investor-id="${t.investorId}">
-      <td>${fmtDate(t.txnDate)}</td>
-      <td class="name-cell">${inv ? inv.name : t.investorId}</td>
-      <td>${acc ? acc.accountNo : ''}</td>
-      <td><span class="tag ${txnTagClass(t.txnType)}">${t.txnType.replace('_',' ')}</span></td>
-      <td class="num">${fmtMoney(Number(t.amount))}</td>
-      <td class="num">${fmtMoney(Number(t.interestAdded||0))}</td>
-      <td class="num">${fmtMoney(Number(t.balanceAfter))}</td>
-      <td>${txnActionIcons(t.id)}</td>
+      <td data-label="Date">${fmtDate(t.txnDate)}</td>
+      <td data-label="Investor" class="name-cell">${inv ? inv.name : t.investorId}</td>
+      <td data-label="Account">${acc ? acc.accountNo : ''}</td>
+      <td data-label="Type"><span class="tag ${txnTagClass(t.txnType)}">${t.txnType.replace('_',' ')}</span></td>
+      <td data-label="Amount" class="num">${fmtMoney(Number(t.amount))}</td>
+      <td data-label="Interest Added" class="num">${fmtMoney(Number(t.interestAdded||0))}</td>
+      <td data-label="Balance After" class="num">${fmtMoney(Number(t.balanceAfter))}</td>
+      <td data-label="Actions">${txnActionIcons(t.id)}</td>
     </tr>`;
   }).join('') + '</tbody></table>';
 
@@ -1173,22 +1355,25 @@ function renderInvestorProfile(id){
       <th class="num">Running Bal.</th><th class="num">Accrued Int.</th><th class="num">Current Value</th><th>Status</th><th>Actions</th>
     </tr></thead><tbody>` + [...accs].sort((a,b)=> a.accountNo.localeCompare(b.accountNo)).map(a=>`
       <tr>
-        <td>${a.accountNo}</td>
-        <td>${fmtDate(a.openingDate)}</td>
-        <td class="num">${fmtMoney(Number(a.openingAmount))}</td>
-        <td class="num">${Number(a.roi).toFixed(2)}%</td>
-        <td class="num">${fmtMoney(Number(a.runningBalance))}</td>
-        <td class="num">${fmtMoney(Number(a.accruedInterest))}</td>
-        <td class="num">${fmtMoney(Number(a.currentValue))}</td>
-        <td><span class="tag ${a.status==='ACTIVE'?'active':'closed'}">${a.status}</span></td>
-        <td><button class="txn-action-btn delete" data-account-delete-id="${a.id}" title="Delete Account">&#128465;</button></td>
-      </tr>`).join('') + `<tr>
-        <td colspan="4" style="font-weight:700;">TOTAL</td>
-        <td class="num" style="font-weight:700;">${fmtMoney(runningBalance)}</td>
-        <td class="num" style="font-weight:700;">${fmtMoney(accrued)}</td>
-        <td class="num" style="font-weight:700;">${fmtMoney(runningBalance+accrued)}</td>
-        <td></td>
-        <td></td>
+        <td data-label="Account No.">${a.accountNo}</td>
+        <td data-label="Opened">${fmtDate(a.openingDate)}</td>
+        <td data-label="Opening Amt" class="num">${fmtMoney(Number(a.openingAmount))}</td>
+        <td data-label="ROI" class="num">${Number(a.roi).toFixed(2)}%</td>
+        <td data-label="Running Bal." class="num">${fmtMoney(Number(a.runningBalance))}</td>
+        <td data-label="Accrued Int." class="num">${fmtMoney(Number(a.accruedInterest))}</td>
+        <td data-label="Current Value" class="num">${fmtMoney(Number(a.currentValue))}</td>
+        <td data-label="Status"><span class="tag ${a.status==='ACTIVE'?'active':'closed'}">${a.status}</span></td>
+        <td data-label="Actions"><button class="txn-action-btn delete" data-account-delete-id="${a.id}" title="Delete Account">&#128465;</button></td>
+      </tr>`).join('') + `<tr class="ledger-total">
+        <td data-label="Account No.">TOTAL</td>
+        <td data-label="Opened"></td>
+        <td data-label="Opening Amt" class="num"></td>
+        <td data-label="ROI" class="num"></td>
+        <td data-label="Running Bal." class="num" style="font-weight:700;">${fmtMoney(runningBalance)}</td>
+        <td data-label="Accrued Int." class="num" style="font-weight:700;">${fmtMoney(accrued)}</td>
+        <td data-label="Current Value" class="num" style="font-weight:700;">${fmtMoney(runningBalance+accrued)}</td>
+        <td data-label="Status"></td>
+        <td data-label="Actions"></td>
       </tr>` + '</tbody></table>';
 
     accWrap.querySelectorAll('[data-account-delete-id]').forEach(btn=>{
@@ -1214,13 +1399,13 @@ function renderInvestorProfile(id){
     </tr></thead><tbody>` + txns.map(t=>{
       const acc = accs.find(a=> a.id===t.accountId);
       return `<tr>
-        <td>${fmtDate(t.txnDate)}</td>
-        <td>${acc ? acc.accountNo : ''}</td>
-        <td><span class="tag ${txnTagClass(t.txnType)}">${t.txnType.replace('_',' ')}</span></td>
-        <td class="num">${fmtMoney(Number(t.amount))}</td>
-        <td class="num">${fmtMoney(Number(t.interestAdded||0))}</td>
-        <td class="num">${fmtMoney(Number(t.balanceAfter))}</td>
-        <td>${txnActionIcons(t.id)}</td>
+        <td data-label="Date">${fmtDate(t.txnDate)}</td>
+        <td data-label="Account">${acc ? acc.accountNo : ''}</td>
+        <td data-label="Type"><span class="tag ${txnTagClass(t.txnType)}">${t.txnType.replace('_',' ')}</span></td>
+        <td data-label="Amount" class="num">${fmtMoney(Number(t.amount))}</td>
+        <td data-label="Interest Added" class="num">${fmtMoney(Number(t.interestAdded||0))}</td>
+        <td data-label="Balance After" class="num">${fmtMoney(Number(t.balanceAfter))}</td>
+        <td data-label="Actions">${txnActionIcons(t.id)}</td>
       </tr>`;
     }).join('') + '</tbody></table>';
     wireTxnActionIcons(ledgerWrap);
