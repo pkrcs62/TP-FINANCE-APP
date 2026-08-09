@@ -1,0 +1,3498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FinSphere V14 &mdash; Borrow • Invest • Grow</title>
+
+<!-- PWA: installability -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0fb894">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+<!-- PWA: iOS home-screen support (iOS ignores manifest.json) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FinSphere">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f7f8;
+    --bg-elev:#ffffff;
+    --panel:#ffffff;
+    --panel-hi:#ffffff;
+    --border:#dde5e8;
+    --border-hi:#c3d0d5;
+    --ink:#132027;
+    --muted:#5b7280;
+    --muted-dim:#8ea0aa;
+    --mint:#0fb894;
+    --mint-deep:#0c9a7d;
+    --mint-glow:rgba(15,184,148,.30);
+    --violet:#5b6ee8;
+    --amber:#d98a1e;
+    --red:#e0435c;
+    --red-glow:rgba(224,67,92,.25);
+    --stamp-bg:#eaf3e3;
+    --stamp-border:#3d6b2c;
+    --stamp-ink:#1f3a17;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+    --r-sm:10px; --r-md:14px; --r-lg:20px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 500px at 15% -10%, rgba(15,184,148,.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(91,110,232,.06), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.5;
+    min-height:100vh;
+    padding-bottom:4rem;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 1.1rem;}
+  ::selection{background:var(--mint);color:#04140f;}
+  html{scroll-behavior:smooth;}
+
+  /* Modern slim scrollbar */
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:8px;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--mint);}
+  *{scrollbar-width:thin;scrollbar-color:var(--border-hi) transparent;}
+
+  header.masthead{
+    padding:1.5rem 0 1.1rem;
+    margin-bottom:1rem;
+  }
+  header.masthead .row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;}
+  header.masthead h1{
+    font-family:var(--sans);
+    font-weight:800;
+    font-size:1.5rem;
+    letter-spacing:-.02em;
+    margin:0;
+    color:var(--ink);
+    display:flex;align-items:center;gap:.55rem;
+  }
+  header.masthead h1 .logo{
+    width:auto;min-width:38px;height:30px;border-radius:9px;padding:0 .4rem;
+    background:linear-gradient(135deg, var(--mint), var(--mint-deep));
+    display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:0 0 18px var(--mint-glow), inset 0 1px 0 rgba(255,255,255,.3);
+    font-size:.72rem;color:#04140f;font-weight:900;letter-spacing:.02em;
+  }
+  header.masthead h1 .mark{color:var(--muted);font-weight:500;font-size:.6em;letter-spacing:0;}
+  .asof{
+    font-family:var(--mono);font-size:.72rem;color:var(--muted);text-align:right;
+    background:var(--panel);border:1px solid var(--border);padding:.4rem .7rem;border-radius:20px;
+  }
+  .asof .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--mint);margin-right:.4em;vertical-align:1px;box-shadow:0 0 8px var(--mint-glow);}
+  .asof.offline .dot{background:var(--red);box-shadow:0 0 8px var(--red-glow);}
+
+  .version-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:44px;
+    padding:.2rem .55rem;
+    border-radius:999px;
+    font-size:.68rem;
+    letter-spacing:.08em;
+    font-weight:900;
+    color:#04140f;
+    background:linear-gradient(135deg, #f6d365, #fda085);
+    border:1px solid rgba(255,255,255,.35);
+    box-shadow:0 8px 18px rgba(0,0,0,.08);
+  }
+  .header-actions{
+    display:flex;
+    align-items:center;
+    gap:.55rem;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+  .install-btn{
+    white-space:nowrap;
+  }
+  #btnConnect{white-space:nowrap;}
+  .user-greeting{
+    font-family:var(--sans);font-size:.82rem;font-weight:600;color:var(--ink);
+    white-space:nowrap;cursor:pointer;
+    display:flex;align-items:center;gap:.4rem;
+    background:var(--panel);border:1px solid var(--border);padding:.4rem .7rem;border-radius:20px;
+  }
+  .user-greeting .hi{color:var(--muted);font-weight:500;margin-right:.15em;}
+  .user-greeting .avatar{
+    width:20px;height:20px;border-radius:50%;
+    background:linear-gradient(135deg, var(--mint), var(--violet));
+    color:#04140f;font-weight:800;font-size:.68rem;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .guest-link{
+    font-family:var(--sans);font-size:.78rem;font-weight:600;color:var(--muted);
+    cursor:pointer;white-space:nowrap;text-decoration:underline;text-underline-offset:2px;
+  }
+  .guest-link:hover{color:var(--ink);}
+  .foot-version{
+    margin-left:.55rem;
+    font-family:var(--mono);
+    font-size:.72rem;
+    font-weight:700;
+    color:var(--muted);
+    border:1px solid var(--border);
+    padding:.15rem .45rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.75);
+  }
+
+  nav.tabs{
+    display:flex;gap:.3rem;flex-wrap:wrap;
+    margin-bottom:1.4rem;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:.35rem;
+  }
+  nav.tabs button{
+    font-family:var(--sans);
+    font-size:.85rem;font-weight:600;
+    background:none;border:none;
+    padding:.55rem 1rem;
+    cursor:pointer;
+    color:var(--muted);
+    border-radius:10px;
+    transition:color .15s, background .25s, box-shadow .25s, transform .15s;
+    flex:1;
+    min-width:fit-content;
+  }
+  nav.tabs button:hover{color:var(--ink);background:var(--panel-hi);}
+  nav.tabs button.active{
+    color:#04140f;
+    background:linear-gradient(135deg, var(--mint), var(--mint-deep));
+    font-weight:700;
+    box-shadow:0 0 16px var(--mint-glow);
+    transform:translateY(-1px);
+  }
+
+  nav.subtabs{
+    display:flex;gap:1.3rem;flex-wrap:wrap;
+    margin-bottom:1.2rem;
+    border-bottom:1px solid var(--border);
+    padding-bottom:0;
+  }
+  nav.subtabs button{
+    font-family:var(--sans);
+    font-size:.86rem;font-weight:600;
+    background:none;border:none;
+    padding:.15rem .05rem .7rem;
+    cursor:pointer;
+    color:var(--muted);
+    border-bottom:2.5px solid transparent;
+    margin-bottom:-1px;
+    transition:color .15s, border-color .15s;
+  }
+  nav.subtabs button:hover{color:var(--ink);}
+  nav.subtabs button.active{
+    color:var(--mint-deep);
+    border-bottom-color:var(--mint);
+    font-weight:700;
+  }
+
+  .screen{display:none;}
+  .screen.active{display:block;animation:fade .25s ease;}
+  .subscreen{display:none;}
+  .subscreen.active{display:block;animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--r-lg);
+    padding:1.3rem 1.4rem;
+    margin-bottom:1.1rem;
+    box-shadow:0 1px 2px rgba(19,32,39,.04), 0 8px 24px rgba(19,32,39,.06);
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg, var(--mint), var(--violet), var(--mint));
+    background-size:200% 100%;
+    opacity:.55;
+  }
+  .card h2{
+    font-size:1.05rem;margin:0 0 1rem;
+    color:var(--ink);
+    font-weight:700;
+    letter-spacing:-.01em;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:.5rem;flex-wrap:wrap;
+  }
+  .card h2 .sub{font-size:.74rem;font-weight:500;color:var(--muted-dim);}
+
+  /* Metric strip */
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-bottom:1.1rem;}
+  .metric{
+    background:var(--panel);
+    border:1px solid var(--border);border-radius:var(--r-md);
+    padding:1rem 1.1rem;
+    box-shadow:0 1px 2px rgba(19,32,39,.04);
+    transition:border-color .2s, transform .2s;
+  }
+  .metric:hover{border-color:var(--border-hi);transform:translateY(-1px);}
+  .metric .label{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted-dim);margin-bottom:.4rem;font-weight:600;}
+  .metric .value{font-family:var(--mono);font-size:1.35rem;font-weight:700;color:var(--mint);text-shadow:0 0 20px var(--mint-glow);}
+  .metric .value.neg{color:var(--red);text-shadow:0 0 20px var(--red-glow);}
+
+  /* Forms */
+  label{display:block;font-size:.76rem;color:var(--muted);margin:.85rem 0 .35rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
+  label:first-child{margin-top:0;}
+  input[type=text],input[type=number],input[type=date],input[type=tel],textarea,select{
+    width:100%;
+    font-family:var(--sans);
+    font-size:.98rem;
+    padding:.7rem .85rem;
+    border:1.5px solid var(--border);
+    border-radius:var(--r-sm);
+    background:var(--bg-elev);
+    color:var(--ink);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input::placeholder,textarea::placeholder{color:var(--muted-dim);}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--mint);box-shadow:0 0 0 4px rgba(47,230,184,.15);}
+  textarea{resize:vertical;min-height:3.2em;}
+  select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237c93a3' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .9rem center;padding-right:2.2rem;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+  @media (max-width:520px){.field-row{grid-template-columns:1fr;}}
+
+  .reference-row{
+    border:1px solid var(--border);border-radius:var(--r-sm);padding:.7rem .8rem;
+    margin-bottom:.6rem;background:var(--bg-elev);
+    display:grid;grid-template-columns:1fr 1fr;gap:.5rem .7rem;position:relative;
+  }
+  .reference-row input, .reference-row select{margin-bottom:0;}
+  .reference-row .rm-ref{
+    grid-column:1/-1;justify-self:end;
+    background:none;border:none;color:var(--red);font-size:.76rem;font-weight:600;
+    cursor:pointer;padding:.15rem 0;
+  }
+  @media (max-width:480px){.reference-row{grid-template-columns:1fr;}}
+  .hint{font-size:.76rem;color:var(--muted-dim);margin-top:.4rem;}
+  .error-text{font-size:.8rem;color:var(--red);margin-top:.4rem;display:none;font-weight:600;}
+  .error-text.show{display:block;}
+
+  button.btn{
+    font-family:var(--sans);
+    font-size:.92rem;font-weight:700;
+    padding:.75rem 1.5rem;
+    border:none;
+    background:linear-gradient(135deg, var(--mint), var(--mint-deep));
+    color:#04140f;
+    border-radius:var(--r-sm);
+    cursor:pointer;
+    letter-spacing:.01em;
+    transition:transform .12s ease, box-shadow .2s ease, filter .15s;
+    box-shadow:0 0 0 rgba(47,230,184,0), 0 4px 14px rgba(47,230,184,.25);
+    position:relative;
+    overflow:hidden;
+  }
+  button.btn::after{
+    content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;
+    background:linear-gradient(120deg, transparent, rgba(255,255,255,.4), transparent);
+    transform:skewX(-20deg);
+    transition:left .5s ease;
+    pointer-events:none;
+  }
+  button.btn:hover::after{left:130%;}
+  button.btn:hover{box-shadow:0 0 24px var(--mint-glow), 0 4px 14px rgba(47,230,184,.3);filter:brightness(1.05);}
+  button.btn:active{transform:translateY(1px) scale(.99);}
+  button.btn.secondary{
+    background:var(--panel-hi);color:var(--ink);border:1.5px solid var(--border-hi);
+    box-shadow:none;
+  }
+  button.btn.secondary:hover{border-color:var(--mint);box-shadow:0 0 16px rgba(47,230,184,.15);filter:none;}
+  button.btn.danger{
+    background:transparent;border:1.5px solid var(--red);color:var(--red);box-shadow:none;
+  }
+  button.btn.danger:hover{background:rgba(255,92,114,.1);box-shadow:0 0 16px var(--red-glow);}
+  button.btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none;filter:none;transform:none;}
+  button.btn.small{padding:.45rem .95rem;font-size:.8rem;}
+  button.btn.xs{padding:.32rem .75rem;font-size:.72rem;border-radius:8px;}
+  .btn-row{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1.1rem;}
+
+  /* Tables */
+  table.ledger{width:100%;border-collapse:collapse;font-size:.87rem;}
+  table.ledger th{
+    text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted-dim);font-weight:700;
+    border-bottom:1px solid var(--border);
+    padding:.6rem .6rem;
+    white-space:nowrap;
+  }
+  table.ledger td{
+    padding:.65rem .6rem;
+    border-bottom:1px solid var(--border);
+    font-family:var(--mono);
+    font-size:.85rem;
+    color:var(--ink);
+  }
+  table.ledger td.name-cell{font-family:var(--sans);font-weight:600;}
+  table.ledger tr:hover td{background:rgba(47,230,184,.05);}
+  table.ledger .num{text-align:right;font-variant-numeric:tabular-nums;}
+
+  /* Recent Activity — sentence-style feed */
+  .activity-feed{display:flex;flex-direction:column;gap:.6rem;}
+  .activity-item{
+    display:flex;align-items:flex-start;gap:.8rem;
+    padding:.8rem .85rem;
+    border:1px solid var(--border);border-radius:var(--r-sm);
+    background:var(--panel-hi);
+    transition:background .15s, border-color .15s;
+  }
+  .activity-item:hover{background:rgba(47,230,184,.06);border-color:var(--border-hi);}
+  .activity-item .icon-chip{
+    flex-shrink:0;width:34px;height:34px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1rem;font-weight:800;
+  }
+  .activity-item .icon-chip.in{background:rgba(47,230,184,.15);color:var(--mint);}
+  .activity-item .icon-chip.out{background:rgba(255,180,67,.15);color:var(--amber);}
+  .activity-item .icon-chip.settle{background:rgba(124,140,255,.15);color:var(--violet);}
+  .activity-item .activity-body{flex:1;min-width:0;}
+  .activity-item .activity-line{
+    font-family:var(--sans);font-size:.92rem;color:var(--ink);line-height:1.4;
+  }
+  .activity-item .activity-line b{font-weight:700;}
+  .activity-item .activity-line .amt{font-family:var(--mono);font-weight:700;white-space:nowrap;}
+  .activity-item .activity-line .amt.in{color:var(--mint);}
+  .activity-item .activity-line .amt.out{color:var(--amber);}
+  .activity-item .activity-meta{
+    font-family:var(--mono);font-size:.74rem;color:var(--muted-dim);
+    margin-top:.25rem;
+  }
+
+  @media (max-width: 420px){
+    .activity-item{flex-wrap:wrap;}
+  }
+  table.ledger .tag{
+    font-family:var(--sans);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700;
+    padding:.22rem .6rem;border-radius:20px;display:inline-block;
+  }
+  .tag.active{background:rgba(47,230,184,.15);color:var(--mint);}
+  .tag.closed{background:rgba(124,147,163,.15);color:var(--muted);}
+  .tag.inactive{background:rgba(255,92,114,.15);color:var(--red);}
+  .tag.investment{background:rgba(47,230,184,.15);color:var(--mint);}
+  .tag.withdrawal{background:rgba(255,180,67,.15);color:var(--amber);}
+  .tag.settlement{background:rgba(124,140,255,.15);color:var(--violet);}
+  .tag.topup{background:rgba(91,110,232,.15);color:var(--violet);}
+
+  .row-link{cursor:pointer;transition:background .15s;}
+  .row-link:hover{background:rgba(15,184,148,.06);}
+
+  .txn-actions{display:flex;gap:.4rem;}
+  .txn-action-btn{
+    width:26px;height:26px;border-radius:7px;border:1px solid var(--border);
+    background:var(--bg-elev);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+    font-size:.85rem;transition:border-color .15s, background .15s;
+    padding:0;
+  }
+  .txn-action-btn:hover{border-color:var(--mint);background:rgba(15,184,148,.08);}
+  .txn-action-btn.delete:hover{border-color:var(--red);background:rgba(224,67,92,.08);}
+  .empty-state{
+    text-align:center;padding:2.6rem 1rem;color:var(--muted-dim);
+    font-size:.9rem;
+  }
+
+  .coming-soon-card{
+    text-align:center;padding:3.2rem 1.5rem;
+  }
+  .coming-soon-card .icon-badge{
+    width:64px;height:64px;border-radius:18px;margin:0 auto 1.2rem;
+    background:linear-gradient(135deg, var(--mint), var(--mint-deep));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 28px var(--mint-glow);
+    font-size:1.6rem;
+  }
+  .coming-soon-card h2{margin-bottom:.4rem;}
+  .coming-soon-badge{
+    display:inline-block;margin-top:1.1rem;
+    font-family:var(--sans);font-weight:900;font-size:.95rem;
+    letter-spacing:.08em;color:var(--mint);
+    background:rgba(15,184,148,.12);border:1px solid rgba(15,184,148,.35);
+    padding:.55rem 1.4rem;border-radius:999px;
+  }
+  .coming-soon-card p{color:var(--muted);max-width:380px;margin:.6rem auto 0;font-size:.9rem;}
+
+  .search-bar{display:flex;gap:.7rem;margin-bottom:1.1rem;}
+  .search-bar input{flex:1;}
+
+  .breadcrumb{font-size:.82rem;color:var(--muted);margin-bottom:.9rem;}
+  .breadcrumb a{color:var(--mint);cursor:pointer;text-decoration:none;font-weight:600;}
+  .breadcrumb a:hover{text-decoration:underline;}
+
+  .investor-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;}
+  .investor-header h2{font-size:1.35rem;margin:0;font-weight:800;letter-spacing:-.01em;}
+  .investor-header .meta{font-size:.84rem;color:var(--muted);margin-top:.3rem;}
+
+  .account-select-list{display:flex;flex-direction:column;gap:.6rem;margin-top:.5rem;}
+  .account-option{
+    border:1.5px solid var(--border);border-radius:var(--r-md);padding:.85rem 1rem;cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;
+    background:var(--bg-elev);
+    transition:border-color .15s, box-shadow .15s, transform .1s;
+  }
+  .account-option:hover{border-color:var(--border-hi);transform:translateY(-1px);}
+  .account-option.selected{border-color:var(--mint);background:rgba(47,230,184,.06);box-shadow:0 0 0 3px rgba(47,230,184,.15), 0 0 20px var(--mint-glow);}
+  .account-option .a-no{font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .account-option .a-val{font-family:var(--mono);text-align:right;color:var(--mint);font-weight:700;}
+  .account-option .a-val .lbl{display:block;font-size:.65rem;color:var(--muted-dim);text-transform:uppercase;font-weight:600;font-family:var(--sans);}
+  .account-option .a-main{display:flex;align-items:center;gap:.7rem;}
+  .account-option input[type="radio"]{
+    width:19px;height:19px;flex-shrink:0;accent-color:var(--mint);cursor:pointer;
+  }
+
+  .preview-box{
+    background:var(--bg-elev);border:1.5px dashed var(--border-hi);border-radius:var(--r-md);padding:1rem 1.1rem;margin-top:1.1rem;
+    font-family:var(--mono);font-size:.85rem;
+  }
+  .preview-box .pline{display:flex;justify-content:space-between;padding:.2rem 0;color:var(--muted);}
+  .preview-box .pline.total{border-top:1px solid var(--border);margin-top:.4rem;padding-top:.5rem;font-weight:700;color:var(--mint);}
+
+  .toast{
+    position:fixed;bottom:1.3rem;left:50%;transform:translateX(-50%);
+    background:var(--panel-hi);color:var(--ink);border:1px solid var(--mint);
+    padding:.8rem 1.4rem;border-radius:20px;font-size:.88rem;font-weight:600;
+    box-shadow:0 8px 30px rgba(0,0,0,.4), 0 0 24px var(--mint-glow);
+    z-index:999;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
+  }
+  .toast.error{border-color:var(--red);box-shadow:0 8px 30px rgba(0,0,0,.4), 0 0 24px var(--red-glow);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+  /* PWA forced update — blocks the app until the person updates */
+  .force-update-overlay{
+    position:fixed;inset:0;background:var(--bg);
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+    gap:1.1rem;z-index:5000;text-align:center;padding:2rem;
+  }
+  .force-update-overlay.show{display:flex;}
+  .force-update-overlay .brand{font-family:var(--sans);font-size:1.5rem;color:var(--ink);font-weight:800;display:flex;align-items:center;gap:.6rem;}
+  .force-update-overlay p{color:var(--muted);font-size:.9rem;max-width:320px;margin:0;}
+  .force-update-overlay button{
+    font-family:var(--sans);font-size:.95rem;font-weight:700;
+    background:linear-gradient(135deg, var(--mint), var(--mint-deep));color:#04140f;border:none;
+    padding:.75rem 1.8rem;border-radius:var(--r-sm);cursor:pointer;
+    box-shadow:0 0 20px var(--mint-glow);
+  }
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(5,9,13,.7);backdrop-filter:blur(3px);
+    display:none;align-items:flex-start;justify-content:center;
+    padding:2.4rem 1rem;z-index:900;overflow-y:auto;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--panel);border:1px solid var(--border-hi);border-radius:var(--r-lg);max-width:520px;width:100%;padding:1.5rem;box-shadow:0 20px 60px rgba(19,32,39,.18), 0 0 0 1px rgba(19,32,39,.02);}
+  .modal h3{margin:0 0 1rem;font-size:1.1rem;color:var(--ink);font-weight:800;}
+  .modal-close-row{display:flex;justify-content:flex-end;margin-top:1.2rem;gap:.7rem;}
+
+  .settings-status{font-family:var(--mono);font-size:.8rem;padding:.7rem .9rem;border-radius:var(--r-sm);margin-top:.8rem;border:1px solid transparent;}
+  .settings-status.ok{background:rgba(47,230,184,.1);color:var(--mint);border-color:rgba(47,230,184,.3);}
+  .settings-status.bad{background:rgba(255,92,114,.1);color:var(--red);border-color:rgba(255,92,114,.3);}
+
+  .spinner{
+    display:inline-block;width:15px;height:15px;border:2px solid var(--border);
+    border-top-color:var(--mint);border-radius:50%;animation:spin .7s linear infinite;
+    vertical-align:-3px;margin-right:.5em;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* Animated revolving app logo mark */
+  @keyframes logoRevolve{to{transform:rotate(360deg);}}
+  .logo-mark{
+    display:inline-block;border-radius:50%;
+    box-shadow:0 0 16px var(--mint-glow);
+    animation:logoRevolve 7s linear infinite;
+    flex-shrink:0;
+  }
+  .brand-stack{display:flex;flex-direction:column;line-height:1.15;}
+  .brand-stack .brand-sub{
+    font-family:var(--sans);font-weight:600;font-size:.42em;
+    color:var(--muted);letter-spacing:.06em;text-transform:uppercase;
+    margin-top:.15em;
+  }
+
+  .loading-overlay{
+    position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:1000;gap:1.1rem;
+  }
+  .loading-overlay .brand{font-family:var(--sans);font-size:1.5rem;color:var(--ink);font-weight:800;display:flex;align-items:center;gap:.6rem;}
+  .loading-overlay .brand .logo{
+    width:auto;min-width:44px;height:34px;border-radius:10px;padding:0 .5rem;
+    background:linear-gradient(135deg, var(--mint), var(--mint-deep));
+    display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:0 0 24px var(--mint-glow);
+    font-size:.8rem;color:#04140f;font-weight:900;letter-spacing:.02em;
+  }
+  .loading-overlay div:last-child{color:var(--muted);font-size:.88rem;}
+  .loading-overlay.hidden{display:none;}
+
+  .busy-overlay{
+    position:fixed;inset:0;background:rgba(19,32,39,.55);backdrop-filter:blur(1.5px);
+    display:flex;align-items:center;justify-content:center;z-index:2000;
+  }
+  .busy-overlay.opaque{background:var(--bg);backdrop-filter:none;}
+  .busy-overlay.hidden{display:none;}
+  .busy-overlay .busy-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:1.4rem 2rem;display:flex;align-items:center;gap:.8rem;
+    box-shadow:0 8px 30px rgba(19,32,39,.25);
+    font-family:var(--sans);font-weight:600;color:var(--ink);font-size:.95rem;
+  }
+
+  /* Source used to render the Hindi agreement PDF (captured with
+     html2canvas and embedded as an image — see generateLoanAgreementPdfHindi
+     for why we don't use jsPDF's doc.html() helper here). Rendering
+     off-screen (negative left) is unreliable with html2canvas's cloning,
+     so this sits in-viewport but hidden behind the opaque busy overlay
+     (higher z-index) while generating. */
+  #hindiAgreementSource{
+    display:none;
+    position:fixed;top:0;left:0;z-index:1500;
+    width:780px;
+    background:var(--stamp-bg);
+    border:5px double var(--stamp-border);
+    padding:36px 42px;
+    font-family:'Noto Sans Devanagari','Inter',sans-serif;
+    color:var(--stamp-ink);
+    font-size:13px;
+    line-height:1.75;
+  }
+  #hindiAgreementSource h1{
+    text-align:center;font-size:20px;letter-spacing:.02em;margin:0 0 14px;color:var(--stamp-ink);
+  }
+  #hindiAgreementSource h2{
+    text-align:center;font-size:13px;font-weight:700;margin:14px 0 8px;color:var(--stamp-ink);
+  }
+  #hindiAgreementSource p{margin:0 0 10px;text-align:justify;}
+  #hindiAgreementSource .clause-label{font-weight:700;margin:12px 0 4px;}
+  #hindiAgreementSource .italic-note{font-style:italic;font-size:11px;color:#3f5a37;}
+  #hindiAgreementSource .sign-grid{display:flex;justify-content:space-between;margin-top:34px;gap:24px;}
+  #hindiAgreementSource .sign-col{flex:1;}
+  #hindiAgreementSource .sign-col .role{font-weight:700;margin-bottom:10px;}
+  #hindiAgreementSource .sign-col div{margin-bottom:8px;}
+
+  footer.pagefoot{
+    max-width:920px;margin:2rem auto 0;padding:1.2rem 1.1rem;
+    border-top:1px solid var(--border);
+    font-size:.74rem;color:var(--muted-dim);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;
+  }
+
+  /* Responsive tuning */
+  html, body{width:100%;overflow-x:hidden;}
+  img, svg, video, canvas{max-width:100%;height:auto;}
+  #recentActivity,
+  #investorListWrap,
+  #combinedLedgerWrap,
+  #profAccountsWrap,
+  #profLedger,
+  #ledgerWrap{
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  @media (max-width: 900px){
+    .wrap{padding:0 .9rem;}
+    .metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .card{padding:1.1rem 1rem;}
+    .investor-header,
+    .search-bar,
+    .btn-row{
+      flex-direction:column;
+      align-items:stretch;
+    }
+    .search-bar input,
+    .search-bar button,
+    .btn-row .btn{
+      width:100%;
+    }
+    .account-option{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+    .account-option .a-val{
+      width:100%;
+      text-align:left;
+    }
+  }
+
+  @media (max-width: 760px){
+    header.masthead .row{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+    header.masthead h1{
+      font-size:1.18rem;
+      line-height:1.2;
+      flex-wrap:wrap;
+    }
+    .asof{
+      width:auto;
+      font-size:.68rem;
+    }
+    nav.tabs,
+    nav.subtabs{
+      flex-wrap:wrap;
+    }
+    nav.tabs button,
+    nav.subtabs button{
+      flex:1 1 auto;
+      min-width:0;
+      padding:.5rem .6rem;
+      font-size:.8rem;
+    }
+    .field-row{
+      grid-template-columns:1fr;
+      gap:.75rem;
+    }
+    .preview-box{
+      padding:.9rem .85rem;
+    }
+
+    /* Stack table content into readable cards */
+    table.ledger{
+      width:100%;
+      min-width:0;
+      border-collapse:separate;
+      border-spacing:0 .75rem;
+      font-size:.85rem;
+    }
+    table.ledger thead{
+      display:none;
+    }
+    table.ledger tbody{
+      display:block;
+    }
+    table.ledger tr{
+      display:block;
+      background:var(--bg-elev);
+      border:1px solid var(--border);
+      border-radius:var(--r-md);
+      overflow:hidden;
+      box-shadow:0 1px 2px rgba(19,32,39,.04);
+      margin:0;
+    }
+    table.ledger td{
+      display:flex;
+      justify-content:space-between;
+      gap:1rem;
+      align-items:flex-start;
+      padding:.62rem .75rem;
+      border-bottom:1px solid var(--border);
+      text-align:left;
+      white-space:normal;
+      word-break:break-word;
+    }
+    table.ledger td:last-child{
+      border-bottom:none;
+    }
+    table.ledger td::before{
+      content:attr(data-label);
+      flex:0 0 42%;
+      font-size:.68rem;
+      line-height:1.35;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:var(--muted-dim);
+      font-family:var(--sans);
+      font-weight:700;
+    }
+    table.ledger td.num{
+      text-align:left;
+    }
+    table.ledger td.num::before{
+      text-align:left;
+    }
+    table.ledger td.name-cell{
+      font-family:var(--sans);
+      font-weight:700;
+    }
+    table.ledger tr.ledger-total{
+      border-color:var(--mint);
+      box-shadow:0 0 0 1px rgba(15,184,148,.08), 0 1px 2px rgba(19,32,39,.04);
+    }
+    table.ledger tr.ledger-total td{
+      background:rgba(15,184,148,.03);
+    }
+    table.ledger tr.ledger-total td::before{
+      color:var(--mint-deep);
+    }
+    .txn-actions{
+      justify-content:flex-start;
+      flex-wrap:wrap;
+    }
+    .txn-action-btn{
+      width:30px;height:30px;
+    }
+    .modal-overlay{
+      padding:1rem;
+      align-items:flex-end;
+    }
+    .modal{
+      max-width:100%;
+      width:100%;
+      padding:1.1rem;
+    }
+  }
+
+  /* Touch-device safety net: some Android PWA/WebView configurations
+     report a wider CSS viewport than the physical screen.  These rules
+     therefore apply to touch devices as well as the normal width queries. */
+  @media (hover: none) and (pointer: coarse){
+    html, body{
+      width:100%;
+      max-width:100%;
+      overflow-x:hidden;
+    }
+    .wrap{
+      width:100%;
+      max-width:none;
+      margin:0;
+      padding-left:.7rem;
+      padding-right:.7rem;
+    }
+    footer.pagefoot{
+      width:100%;
+      max-width:none;
+      margin-left:0;
+      margin-right:0;
+      padding-left:.7rem;
+      padding-right:.7rem;
+    }
+    .metrics{
+      grid-template-columns:1fr;
+    }
+    .metric{
+      width:100%;
+      min-width:0;
+    }
+    .card{
+      width:100%;
+      min-width:0;
+      padding:.9rem .8rem;
+    }
+    .investor-header,
+    .search-bar,
+    .btn-row{
+      width:100%;
+      min-width:0;
+    }
+    .search-bar input,
+    .search-bar button,
+    .btn-row .btn{
+      max-width:100%;
+    }
+
+    /* Never let a ledger force the page wider than the phone. */
+    #recentActivity,
+    #investorListWrap,
+    #combinedLedgerWrap,
+    #profAccountsWrap,
+    #profLedger,
+    #ledgerWrap{
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      overflow:visible;
+    }
+    table.ledger{
+      display:block;
+      width:100% !important;
+      max-width:100% !important;
+      min-width:0 !important;
+      table-layout:fixed;
+      border-spacing:0 .65rem;
+    }
+    table.ledger tbody{
+      width:100%;
+    }
+    table.ledger tr{
+      width:100%;
+      max-width:100%;
+    }
+    table.ledger td{
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      overflow-wrap:anywhere;
+    }
+    table.ledger td::before{
+      min-width:0;
+    }
+    table.ledger td > *{
+      min-width:0;
+      max-width:58%;
+    }
+    table.ledger td.num{
+      font-size:.82rem;
+    }
+  }
+
+  @media (max-width: 420px){
+    .wrap{padding:0 .65rem;}
+    nav.tabs,
+    nav.subtabs{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:.3rem;
+    }
+    nav.tabs button,
+    nav.subtabs button{
+      padding:.55rem .4rem;
+      font-size:.76rem;
+      text-align:center;
+    }
+    .metrics{grid-template-columns:1fr;}
+    .card{padding:.95rem .85rem;}
+    .card h2{
+      font-size:1rem;
+    }
+    .metric .value{
+      font-size:1.15rem;
+    }
+    button.btn{
+      width:100%;
+    }
+    .btn-row .btn{
+      width:100%;
+    }
+  }
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="brand">
+    <img class="logo-mark" src="icons/icon-192.png" alt="" width="44" height="44">
+    <div class="brand-stack"><span>FinSphere</span><span class="brand-sub">by TP Finance</span></div>
+  </div>
+  <div><span class="spinner"></span>Connecting to your financial records&hellip;</div>
+</div>
+
+<div class="busy-overlay hidden" id="busyOverlay">
+  <div class="busy-card"><span class="spinner"></span><span id="busyOverlayText">Please wait&hellip; updating database</span></div>
+</div>
+
+<div id="hindiAgreementSource"></div>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="row">
+      <h1>
+        <img class="logo-mark" src="icons/icon-192.png" alt="" width="34" height="34">
+        <span class="brand-stack"><span>FinSphere <span class="version-badge">V14</span></span><span class="brand-sub">by TP Finance</span></span>
+        <span class="mark">Borrow • Invest • Grow</span>
+      </h1>
+      <div class="header-actions">
+        <button class="btn secondary small install-btn hidden" id="btnInstallApp" type="button">Install App</button>
+        <span class="user-greeting hidden" id="userGreeting" title="Tap to sign out"></span>
+        <div class="asof offline" id="syncStatus"><span class="dot"></span>Not connected</div>
+        <button class="btn secondary xs hidden" id="btnConnect" type="button">Connect</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- GOOGLE SIGN-IN MODAL — shown once at startup; dismiss via Guest -->
+  <div class="modal-overlay" id="loginModalOverlay" style="align-items:center;">
+    <div class="modal" style="text-align:center;max-width:380px;">
+      <img class="logo-mark" src="icons/icon-192.png" alt="" width="56" height="56" style="margin-bottom:.9rem;">
+      <h3 style="text-align:center;">Welcome to FinSphere</h3>
+      <p style="color:var(--muted);font-size:.86rem;margin:0 0 1.3rem;">Sign in with Google so the app knows who's using it, or continue without signing in.</p>
+      <div id="googleSignInButton" style="display:flex;justify-content:center;margin-bottom:1.1rem;"></div>
+      <span class="guest-link" id="btnGuest">Continue as Guest</span>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-screen="dashboard" class="active">Dashboard</button>
+    <button data-screen="investors">Investors</button>
+    <button data-screen="borrowers">Borrowers</button>
+    <button data-screen="reports">Reports</button>
+</nav>
+
+  <!-- DASHBOARD -->
+  <section class="screen active" id="screen-dashboard">
+    <div class="metrics" id="dashMetrics"></div>
+    <div class="card">
+      <h2>Recent Activity <span class="sub">last 15 transactions, all investors</span></h2>
+      <div id="recentActivity"></div>
+    </div>
+  </section>
+
+  <!-- INVESTORS MODULE (top-level tab with sub-modules) -->
+  <section class="screen" id="screen-investors">
+    <nav class="subtabs" id="investorSubtabs">
+      <button data-subscreen="inv-mgmt" class="active">Investor Mgmt</button>
+      <button data-subscreen="inv-deposits">Deposits</button>
+      <button data-subscreen="inv-withdrawal">Withdrawal</button>
+      <button data-subscreen="inv-ledger">Ledger</button>
+    </nav>
+
+    <!-- SUB: Investor Mgmt (list + add) -->
+    <div class="subscreen active" id="sub-inv-mgmt">
+      <div class="card">
+        <h2>Investors <span class="sub" id="investorCount"></span></h2>
+        <div class="search-bar">
+          <input type="text" id="investorSearch" placeholder="Search by name, ID or mobile&hellip;">
+          <button class="btn" id="btnAddInvestor">+ Add Investor</button>
+        </div>
+        <div id="investorListWrap"></div>
+      </div>
+    </div>
+
+    <!-- SUB: Deposits (new investment) -->
+    <div class="subscreen" id="sub-inv-deposits">
+      <div class="card">
+        <h2>Record New Investment</h2>
+        <label for="invInvestor">Investor</label>
+        <select id="invInvestor"></select>
+        <div class="hint">Don't see them? <a data-subgoto="inv-mgmt" id="linkNewInvestor" style="color:var(--mint);cursor:pointer;">Add an investor first</a>.</div>
+
+        <div id="invExistingAccounts" style="display:none;">
+          <label>Existing Accounts for this Investor</label>
+          <div class="account-select-list" id="invExistingAccountsList"></div>
+        </div>
+
+        <div id="invModeChoice" style="display:none;" class="preview-box">
+          <div style="font-weight:700;color:var(--ink);margin-bottom:.5rem;">
+            An account already exists at <span id="invMatchedRoi"></span>% ROI.
+          </div>
+          <div class="btn-row" style="margin-top:.3rem;">
+            <button class="btn small" id="btnChooseTopup" type="button">Add to Existing Account (Top-Up)</button>
+            <button class="btn secondary small" id="btnChooseNew" type="button">Create New Account Anyway</button>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div>
+            <label for="invAmount">Investment Amount (Rs.)</label>
+            <input type="number" id="invAmount" min="0.01" step="0.01" placeholder="e.g. 100000">
+          </div>
+          <div>
+            <label for="invDate">Investment Date</label>
+            <input type="date" id="invDate">
+          </div>
+        </div>
+        <div class="field-row" id="invRoiRow">
+          <div>
+            <label for="invRoi">ROI Offered (% p.a.)</label>
+            <input type="number" id="invRoi" min="0.01" step="0.01" placeholder="e.g. 12">
+          </div>
+          <div>
+            <label for="invRemarks">Remarks (optional)</label>
+            <input type="text" id="invRemarks" placeholder="">
+          </div>
+        </div>
+        <div class="hint" id="invTopupNotice" style="display:none;">Adding funds to <strong id="invTopupAccountLabel"></strong> at its existing ROI. <a id="invCancelTopup" style="color:var(--mint);cursor:pointer;">Cancel and create a new account instead</a>.</div>
+
+        <label for="invPaymentMode">Mode of Receipt</label>
+        <select id="invPaymentMode">
+          <option value="">Select mode&hellip;</option>
+          <option value="Cash">Cash</option>
+          <option value="Cheque">Cheque</option>
+          <option value="UPI">UPI</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="NEFT">NEFT</option>
+          <option value="RTGS">RTGS</option>
+          <option value="IMPS">IMPS</option>
+        </select>
+
+        <div id="invChequeFields" style="display:none;">
+          <div class="field-row">
+            <div>
+              <label for="invChequeNo">Cheque No.</label>
+              <input type="text" id="invChequeNo">
+            </div>
+            <div>
+              <label for="invChequeDate">Cheque Dated</label>
+              <input type="date" id="invChequeDate">
+            </div>
+          </div>
+          <label for="invDrawnOnBank">Drawn On (Bank)</label>
+          <input type="text" id="invDrawnOnBank" placeholder="e.g. State Bank of India, Agra">
+        </div>
+
+        <div id="invRefFields" style="display:none;">
+          <label for="invTxnRefNo">Transaction / UTR Reference No.</label>
+          <input type="text" id="invTxnRefNo">
+        </div>
+
+        <label for="invNarration">Narration</label>
+        <input type="text" id="invNarration" placeholder="e.g. Towards new investment">
+
+        <label for="invCreditAccountNo">Credited To &mdash; Account No. <span style="text-transform:none;font-weight:400;">(admin only, optional)</span></label>
+        <input type="text" id="invCreditAccountNo" placeholder="Firm's bank account the funds were credited to">
+        <label for="invCreditAccountName">Credited To &mdash; Account Name <span style="text-transform:none;font-weight:400;">(admin only, optional)</span></label>
+        <input type="text" id="invCreditAccountName" placeholder="Account holder name">
+        <div class="hint">These two fields print on the receipt only if filled in.</div>
+
+        <div class="error-text" id="invError"></div>
+        <div class="btn-row">
+          <button class="btn" id="btnSubmitInvestment">Create Investment Account</button>
+        </div>
+        <p class="hint" id="invHintText">A new, separately numbered account is created for every investment &mdash; even for an investor who already holds active accounts. This keeps each ROI and date isolated.</p>
+      </div>
+    </div>
+
+    <!-- SUB: Withdrawal -->
+    <div class="subscreen" id="sub-inv-withdrawal">
+      <div class="card">
+        <h2>Process a Withdrawal</h2>
+        <label for="wdInvestor">Investor</label>
+        <select id="wdInvestor"></select>
+
+        <label>Investment Account</label>
+        <div class="account-select-list" id="wdAccountList">
+          <div class="empty-state">Select an investor to see their accounts.</div>
+        </div>
+
+        <div class="field-row" style="margin-top:1rem;">
+          <div>
+            <label for="wdDate">Withdrawal Date</label>
+            <input type="date" id="wdDate">
+          </div>
+          <div>
+            <label for="wdAmount">Withdrawal Amount (Rs.)</label>
+            <input type="number" id="wdAmount" min="0.01" step="0.01">
+          </div>
+        </div>
+        <label for="wdRemarks">Remarks (optional)</label>
+        <input type="text" id="wdRemarks">
+
+        <div class="preview-box" id="wdPreview" style="display:none;"></div>
+        <div class="error-text" id="wdError"></div>
+
+        <div class="btn-row">
+          <button class="btn" id="btnSubmitWithdrawal" disabled>Confirm Withdrawal</button>
+          <button class="btn secondary" id="btnFullSettle" disabled>Full Settlement Instead</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB: Ledger (combined, all investors) -->
+    <div class="subscreen" id="sub-inv-ledger">
+      <div class="card">
+        <h2>Combined Ledger <span class="sub">every account, every investor, chronological</span></h2>
+        <div class="search-bar">
+          <select id="ledgerInvestorFilter" style="flex:1;">
+            <option value="">All Investors</option>
+          </select>
+        </div>
+        <div id="combinedLedgerWrap"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INVESTOR PROFILE (drill-down detail, reached from Investor Mgmt) -->
+  <section class="screen" id="screen-investor-profile">
+    <div class="breadcrumb"><a data-goto="investors" data-subgoto="inv-mgmt">&larr; All Investors</a></div>
+    <div class="card">
+      <div class="investor-header">
+        <div>
+          <h2 id="profName">&nbsp;</h2>
+          <div class="meta" id="profMeta"></div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="btn secondary small" id="btnEditInvestor">Edit</button>
+          <button class="btn danger small" id="btnToggleStatus">Deactivate</button>
+          <button class="btn danger small" id="btnDeleteInvestor">Delete</button>
+        </div>
+      </div>
+      <div class="metrics" id="profMetrics"></div>
+    </div>
+    <div class="card">
+      <h2>Investment Accounts</h2>
+      <div id="profAccounts"></div>
+    </div>
+    <div class="card">
+      <h2>Combined Ledger <span class="sub">all accounts, chronological</span></h2>
+      <div id="profLedger"></div>
+    </div>
+  </section>
+
+  <!-- BORROWERS -->
+  <section class="screen" id="screen-borrowers">
+    <div class="card">
+      <h2>Borrowers <span class="sub" id="borrowerCount"></span></h2>
+      <div class="search-bar">
+        <input type="text" id="borrowerSearch" placeholder="Search by name, ID or mobile&hellip;">
+        <button class="btn" id="btnAddBorrower">+ Add Borrower</button>
+      </div>
+      <div id="borrowerListWrap"></div>
+    </div>
+
+    <div class="card coming-soon-card">
+      <div class="icon-badge">&#128179;</div>
+      <h2>Loans — EMI &amp; Bullet Repayment</h2>
+      <p>Disbursing loans against a borrower, auto-generated EMI schedules, bullet-repayment tracking, and collection receipts are being built next.</p>
+      <div class="coming-soon-badge">COMING SOON</div>
+    </div>
+  </section>
+
+  <!-- REPORTS -->
+  <section class="screen" id="screen-reports">
+    <div class="card">
+      <h2>Reports <span class="sub">as-on-date position, exportable per investor or combined</span></h2>
+      <div class="field-row">
+        <div>
+          <label for="repAsOnDate">As On Date</label>
+          <input type="date" id="repAsOnDate">
+        </div>
+        <div>
+          <label for="repInvestor">Investor</label>
+          <select id="repInvestor">
+            <option value="">All Investors (Combined)</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnGenerateReport">Generate Report</button>
+      </div>
+    </div>
+
+    <div class="card" id="reportResultCard" style="display:none;">
+      <h2>
+        <span id="reportTitle">Report</span>
+        <span class="btn-row" style="margin-top:0;">
+          <button class="btn secondary small" id="btnExportPdf">Export PDF</button>
+          <button class="btn secondary small" id="btnExportExcel">Export Excel</button>
+          <button class="btn secondary small" id="btnGenerateAgreement" style="display:none;">Generate Loan Agreement</button>
+          <button class="btn secondary small" id="btnGenerateAgreementHindi" style="display:none;">ऋण अनुबंध (Hindi)</button>
+        </span>
+      </h2>
+      <div id="reportBody"></div>
+    </div>
+  </section>
+</div>
+
+<footer class="pagefoot">
+  <span>FinSphere &mdash; by TP Finance</span><span class="foot-version">V14</span>
+  <span id="footAsOn"></span>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<div class="force-update-overlay" id="updateBanner">
+  <div class="brand">
+    <img class="logo-mark" src="icons/icon-192.png" alt="" width="44" height="44">
+    <div class="brand-stack"><span>FinSphere</span><span class="brand-sub">by TP Finance</span></div>
+  </div>
+  <p>A newer version of this app is available. Please update to continue &mdash; this only takes a second.</p>
+  <button id="btnApplyUpdate">Update Now</button>
+</div>
+
+<!-- Add / Edit Investor Modal -->
+<div class="modal-overlay" id="investorModal">
+  <div class="modal">
+    <h3 id="investorModalTitle">Add Investor</h3>
+    <label for="mInvName">Investor Name</label>
+    <input type="text" id="mInvName">
+    <label for="mInvFatherName">Father's Name</label>
+    <input type="text" id="mInvFatherName">
+    <label for="mInvAddress">Address</label>
+    <textarea id="mInvAddress"></textarea>
+    <label for="mInvMobile">Mobile Number</label>
+    <input type="tel" id="mInvMobile" maxlength="10" placeholder="10-digit mobile number">
+    <label for="mInvRemarks">Remarks (optional)</label>
+    <input type="text" id="mInvRemarks">
+    <div class="error-text" id="modalError"></div>
+    <div class="modal-close-row">
+      <button class="btn secondary" id="btnModalCancel">Cancel</button>
+      <button class="btn" id="btnModalSave">Save Investor</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Borrower Modal -->
+<div class="modal-overlay" id="borrowerModal">
+  <div class="modal">
+    <h3 id="borrowerModalTitle">Add Borrower</h3>
+    <label for="mBrwName">Borrower Name</label>
+    <input type="text" id="mBrwName">
+    <label for="mBrwFatherName">Father's Name</label>
+    <input type="text" id="mBrwFatherName">
+    <label for="mBrwAddress">Address</label>
+    <textarea id="mBrwAddress"></textarea>
+    <label for="mBrwMobile">Mobile Number</label>
+    <input type="tel" id="mBrwMobile" maxlength="10" placeholder="10-digit mobile number">
+    <label for="mBrwRemarks">Remarks (optional)</label>
+    <input type="text" id="mBrwRemarks">
+
+    <label style="margin-top:1rem;">References <span class="sub" style="font-weight:400;">(relative/contact, in case borrower is unreachable)</span></label>
+    <div id="borrowerRefList"></div>
+    <button type="button" class="btn secondary small" id="btnAddReference" style="margin-top:.4rem;">+ Add Reference</button>
+
+    <div class="error-text" id="borrowerModalError"></div>
+    <div class="modal-close-row">
+      <button class="btn secondary" id="btnBorrowerModalCancel">Cancel</button>
+      <button class="btn" id="btnBorrowerModalSave">Save Borrower</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="txnEditModal">
+  <div class="modal">
+    <h3>Edit Transaction</h3>
+    <p class="hint" id="txnEditContext" style="margin-top:0;"></p>
+    <div class="field-row">
+      <div>
+        <label for="teDate">Date</label>
+        <input type="date" id="teDate">
+      </div>
+      <div>
+        <label for="teAmount">Amount (Rs.)</label>
+        <input type="number" id="teAmount" min="0.01" step="0.01">
+      </div>
+    </div>
+    <label for="tePaymentMode">Mode of Receipt</label>
+    <select id="tePaymentMode">
+      <option value="">Select mode&hellip;</option>
+      <option value="Cash">Cash</option>
+      <option value="Cheque">Cheque</option>
+      <option value="UPI">UPI</option>
+      <option value="Bank Transfer">Bank Transfer</option>
+      <option value="NEFT">NEFT</option>
+      <option value="RTGS">RTGS</option>
+      <option value="IMPS">IMPS</option>
+    </select>
+    <div id="teChequeFields" style="display:none;">
+      <div class="field-row">
+        <div>
+          <label for="teChequeNo">Cheque No.</label>
+          <input type="text" id="teChequeNo">
+        </div>
+        <div>
+          <label for="teChequeDate">Cheque Dated</label>
+          <input type="date" id="teChequeDate">
+        </div>
+      </div>
+      <label for="teDrawnOnBank">Drawn On (Bank)</label>
+      <input type="text" id="teDrawnOnBank">
+    </div>
+    <div id="teRefFields" style="display:none;">
+      <label for="teTxnRefNo">Transaction / UTR Reference No.</label>
+      <input type="text" id="teTxnRefNo">
+    </div>
+    <label for="teNarration">Narration</label>
+    <input type="text" id="teNarration">
+    <label for="teRemarks">Remarks</label>
+    <input type="text" id="teRemarks">
+    <label for="teCreditAccountNo">Credited To &mdash; Account No. <span style="text-transform:none;font-weight:400;">(admin only)</span></label>
+    <input type="text" id="teCreditAccountNo">
+    <label for="teCreditAccountName">Credited To &mdash; Account Name <span style="text-transform:none;font-weight:400;">(admin only)</span></label>
+    <input type="text" id="teCreditAccountName">
+    <div class="hint">ROI cannot be changed here — it belongs to the account. To use a different ROI, create a new account instead.</div>
+    <div class="error-text" id="teError"></div>
+    <div class="modal-close-row">
+      <button class="btn secondary" id="btnTxnEditCancel">Cancel</button>
+      <button class="btn" id="btnTxnEditSave">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+/* =========================================================
+   Ledger — Financial Management Platform (frontend)
+   Backend: Google Apps Script Web App (see AppsScript.gs)
+   ========================================================= */
+
+const state = {
+  scriptUrl: (typeof DEFAULT_SCRIPT_URL !== 'undefined' && DEFAULT_SCRIPT_URL !== 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE' ? DEFAULT_SCRIPT_URL : ''),
+  investors: [],
+  accounts: [],
+  transactions: [],
+  borrowers: [],
+  asOnDate: null,
+  selectedInvestorId: null,
+  selectedWithdrawAccountId: null,
+  editingInvestorId: null,
+  editingBorrowerId: null,
+  loaded: false
+};
+
+let deferredInstallPrompt = null;
+const APP_VERSION = 'V14';
+
+// ---------- Utilities ----------
+
+function fmtMoney(n){
+  if (n === null || n === undefined || isNaN(n)) return 'Rs. 0.00';
+  const sign = n < 0 ? '-' : '';
+  return sign + 'Rs. ' + Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+// For legal documents (agreements) — amounts are stated in round whole
+// rupees, no paise, matching how such figures are actually written in
+// contracts ("Rupees Ninety Seven Thousand Four Hundred Forty Five only").
+function fmtMoneyWhole(n){
+  if (n === null || n === undefined || isNaN(n)) return 'Rs. 0';
+  const sign = n < 0 ? '-' : '';
+  return sign + 'Rs. ' + Math.round(Math.abs(n)).toLocaleString('en-IN');
+}
+function fmtDate(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+}
+function todayISO(){
+  return new Date().toISOString().slice(0,10);
+}
+function txnTagClass(txnType){
+  if (txnType === 'INVESTMENT') return 'investment';
+  if (txnType === 'TOPUP') return 'topup';
+  if (txnType === 'FULL_SETTLEMENT') return 'settlement';
+  return 'withdrawal';
+}
+
+function setInstallButtonVisibility(show){
+  const btn = document.getElementById('btnInstallApp');
+  if (!btn) return;
+  btn.classList.toggle('hidden', !show);
+}
+
+function updateVersionLabels(){
+  document.title = `FinSphere ${APP_VERSION} — Borrow • Invest • Grow`;
+}
+
+// Renders the edit/delete icon pair for a transaction row. The
+// buttons carry data-txn-id so the shared click wiring can look up
+// the transaction from state.transactions.
+function txnActionIcons(txnId){
+  return `<div class="txn-actions">
+    <button class="txn-action-btn receipt txn-action-btn" data-action="receipt" data-txn-id="${txnId}" title="Generate Receipt">&#129534;</button>
+    <button class="txn-action-btn edit txn-action-btn" data-action="edit" data-txn-id="${txnId}" title="Edit">&#9998;</button>
+    <button class="txn-action-btn delete txn-action-btn" data-action="delete" data-txn-id="${txnId}" title="Delete">&#128465;</button>
+  </div>`;
+}
+
+// Attaches click handlers for every action icon inside `container`.
+// Call this once after rendering any table that used txnActionIcons().
+function wireTxnActionIcons(container){
+  container.querySelectorAll('.txn-action-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const txnId = btn.dataset.txnId;
+      const txn = state.transactions.find(t=> String(t.id)===String(txnId));
+      if (!txn) return;
+      if (btn.dataset.action === 'edit') openTxnEditModal(txn);
+      else if (btn.dataset.action === 'receipt') generateReceiptFromTxn(txn);
+      else deleteTransactionFlow(txn);
+    });
+  });
+}
+
+function toast(msg, isError){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=> t.classList.remove('show'), 3200);
+}
+
+// ---------- API layer ----------
+
+const FRIENDLY_CONNECTION_ERROR = 'Database not connected. Please check the Apps Script Web App URL and try again.';
+
+async function parseApiResponse(res){
+  const text = await res.text();
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.startsWith('<') || trimmed.toUpperCase().startsWith('<!DOCTYPE')){
+    throw new Error(FRIENDLY_CONNECTION_ERROR);
+  }
+  let data;
+  try{
+    data = JSON.parse(trimmed);
+  }catch(e){
+    throw new Error(FRIENDLY_CONNECTION_ERROR);
+  }
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+async function apiGet(action){
+  if (!state.scriptUrl) throw new Error(FRIENDLY_CONNECTION_ERROR);
+  let res;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 18000); // Apps Script cold starts can be slow; give it a fair chance before giving up this attempt
+  try{
+    res = await fetch(state.scriptUrl + '?action=' + encodeURIComponent(action), { signal: controller.signal });
+  }catch(networkErr){
+    throw new Error(FRIENDLY_CONNECTION_ERROR);
+  }finally{
+    clearTimeout(timeout);
+  }
+  return parseApiResponse(res);
+}
+
+function setBusy(isBusy, message){
+  const overlay = document.getElementById('busyOverlay');
+  if (isBusy){
+    document.getElementById('busyOverlayText').textContent = message || 'Please wait… updating database';
+    overlay.classList.remove('hidden');
+  } else {
+    overlay.classList.add('hidden');
+  }
+}
+
+async function apiPost(action, payload){
+  if (!state.scriptUrl) throw new Error(FRIENDLY_CONNECTION_ERROR);
+  setBusy(true, 'Please wait… updating database');
+  let res;
+  try{
+    res = await fetch(state.scriptUrl, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'}, // avoids CORS preflight on Apps Script
+      body: JSON.stringify({action, payload})
+    });
+  }catch(networkErr){
+    setBusy(false);
+    throw new Error(FRIENDLY_CONNECTION_ERROR);
+  }
+  try{
+    return await parseApiResponse(res);
+  } finally {
+    setBusy(false);
+  }
+}
+
+function setSyncStatus(ok, label){
+  const el = document.getElementById('syncStatus');
+  el.className = 'asof' + (ok ? '' : ' offline');
+  el.innerHTML = '<span class="dot"></span>' + label;
+  document.getElementById('btnConnect').classList.toggle('hidden', ok);
+}
+
+async function refreshAll(showLoading){
+  try{
+    const data = await apiGet('getAll');
+    state.investors = data.investors || [];
+    state.accounts = data.accounts || [];
+    state.transactions = data.transactions || [];
+    state.borrowers = data.borrowers || [];
+    state.asOnDate = data.asOnDate;
+    state.loaded = true;
+    setSyncStatus(true, 'Synced ' + new Date(data.asOnDate).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'}));
+    document.getElementById('footAsOn').textContent = 'Values as on ' + fmtDate(data.asOnDate);
+    renderAll();
+    return true;
+  }catch(err){
+    setSyncStatus(false, err.message === FRIENDLY_CONNECTION_ERROR ? 'Database not connected' : 'Not connected');
+    if (state.scriptUrl) toast(err.message, true);
+    return false;
+  }
+}
+
+// A fresh Google Apps Script Web App can take several seconds to "wake up"
+// on its first request (cold start), especially on a device/network that's
+// never hit it before. A single failed attempt doesn't mean it's actually
+// unreachable — retry a few times with a short growing delay before we
+// tell the person it's genuinely not connected.
+let connectInFlight = false;
+async function connectWithRetry(manual){
+  if (connectInFlight) return;
+  if (!state.scriptUrl){
+    setSyncStatus(false, 'Not connected');
+    return;
+  }
+  connectInFlight = true;
+  const btn = document.getElementById('btnConnect');
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+
+  const attempts = 4;
+  const delays = [0, 2000, 4000, 6000]; // ms before each attempt
+  let ok = false;
+  const overlayMsg = document.querySelector('#loadingOverlay > div:last-child');
+  for (let i = 0; i < attempts; i++){
+    if (delays[i]) await new Promise(r => setTimeout(r, delays[i]));
+    const label = i === 0 ? 'Connecting&hellip;' : `Still connecting&hellip; (${i + 1}/${attempts})`;
+    setSyncStatus(false, label);
+    if (overlayMsg) overlayMsg.innerHTML = '<span class="spinner"></span>' +
+      (i === 0 ? 'Connecting to your financial records&hellip;' : `Still connecting, please wait&hellip; (attempt ${i + 1} of ${attempts})`);
+    btn.textContent = 'Connecting…';
+    ok = await refreshAll();
+    if (ok) break;
+  }
+
+  btn.textContent = originalLabel;
+  btn.disabled = false;
+  connectInFlight = false;
+  if (!ok && manual){
+    toast('Still unable to reach the database. Check your internet connection and try again.', true);
+  }
+}
+
+document.getElementById('btnConnect').addEventListener('click', () => connectWithRetry(true));
+
+// ---------- Rendering: Dashboard ----------
+
+function renderAll(){
+  renderDashboard();
+  renderInvestorList();
+  renderInvestmentForm();
+  renderWithdrawalForm();
+  renderReportInvestorDropdown();
+  renderCombinedLedger();
+  renderBorrowerList();
+  if (state.selectedInvestorId) renderInvestorProfile(state.selectedInvestorId);
+}
+
+function renderDashboard(){
+  const activeInvestors = state.investors.filter(i => i.status === 'ACTIVE').length;
+  const activeAccounts = state.accounts.filter(a => a.status === 'ACTIVE');
+  const runningBalance = activeAccounts.reduce((s,a)=> s + Number(a.runningBalance||0), 0);
+  const accruedInterest = activeAccounts.reduce((s,a)=> s + Number(a.accruedInterest||0), 0);
+  const totalLiability = runningBalance + accruedInterest;
+
+  const metrics = [
+    ['Total Investors', state.investors.length],
+    ['Active Investors', activeInvestors],
+    ['Active Accounts', activeAccounts.length],
+    ['Running Balance', fmtMoney(runningBalance)],
+    ['Accrued Interest', fmtMoney(accruedInterest)],
+    ['Total Liability', fmtMoney(totalLiability)]
+  ];
+  document.getElementById('dashMetrics').innerHTML = metrics.map(([label,value])=>
+    `<div class="metric"><div class="label">${label}</div><div class="value">${value}</div></div>`
+  ).join('');
+
+  const recent = [...state.transactions]
+    .sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0,15);
+
+  const wrap = document.getElementById('recentActivity');
+  if (!recent.length){
+    wrap.innerHTML = '<div class="empty-state">No transactions recorded yet.</div>';
+    return;
+  }
+
+  const VERB = {
+    INVESTMENT: { word: 'deposited', dir: 'in' },
+    TOPUP: { word: 'deposited (top-up)', dir: 'in' },
+    WITHDRAWAL: { word: 'withdrew', dir: 'out' },
+    FULL_SETTLEMENT: { word: 'withdrew (full settlement)', dir: 'settle' }
+  };
+
+  wrap.innerHTML = '<div class="activity-feed">' + recent.map(t=>{
+    const inv = state.investors.find(i=> String(i.id)===String(t.investorId));
+    const acc = state.accounts.find(a=> String(a.id)===String(t.accountId));
+    const name = inv ? inv.name : t.investorId;
+    const accNo = acc ? acc.accountNo : '';
+    const v = VERB[t.txnType] || { word: t.txnType.replace('_',' ').toLowerCase(), dir: 'out' };
+    const icon = v.dir === 'in' ? '&#8595;' : v.dir === 'settle' ? '&#10003;' : '&#8593;'; // deposit=down-into-account, withdrawal=up-out, settlement=check
+    const amtClass = v.dir === 'in' ? 'in' : v.dir === 'out' ? 'out' : '';
+
+    return `<div class="activity-item">
+      <div class="icon-chip ${v.dir}">${icon}</div>
+      <div class="activity-body">
+        <div class="activity-line"><b>${name}</b> ${v.word} <span class="amt ${amtClass}">${fmtMoney(Number(t.amount))}</span></div>
+        <div class="activity-meta">${accNo} &middot; ${fmtDate(t.txnDate)}</div>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+// ---------- Rendering: Investor list ----------
+
+function renderInvestorList(){
+  const q = (document.getElementById('investorSearch').value || '').trim().toLowerCase();
+  document.getElementById('investorCount').textContent = `(${state.investors.length} total)`;
+
+  let list = state.investors;
+  if (q){
+    list = list.filter(i =>
+      (i.name||'').toLowerCase().includes(q) ||
+      (i.id||'').toLowerCase().includes(q) ||
+      (i.mobile||'').toString().includes(q)
+    );
+  }
+  list = [...list].sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+
+  const wrap = document.getElementById('investorListWrap');
+  if (!list.length){
+    wrap.innerHTML = '<div class="empty-state">No investors found.</div>';
+    return;
+  }
+
+  wrap.innerHTML = `<table class="ledger"><thead><tr>
+    <th>ID</th><th>Name</th><th>Mobile</th><th class="num">Accounts</th><th class="num">Total Value</th><th>Status</th>
+  </tr></thead><tbody>` + list.map(inv=>{
+    const accs = state.accounts.filter(a=> String(a.investorId)===String(inv.id) && a.status==='ACTIVE');
+    const totalValue = accs.reduce((s,a)=> s + Number(a.currentValue||0), 0);
+    return `<tr class="row-link" data-investor-id="${inv.id}">
+      <td data-label="ID">${inv.id}</td>
+      <td data-label="Name" class="name-cell">${inv.name}</td>
+      <td data-label="Mobile">${inv.mobile||''}</td>
+      <td data-label="Accounts" class="num">${accs.length}</td>
+      <td data-label="Total Value" class="num">${fmtMoney(totalValue)}</td>
+      <td data-label="Status"><span class="tag ${inv.status==='ACTIVE'?'active':'inactive'}">${inv.status}</span></td>
+    </tr>`;
+  }).join('') + '</tbody></table>';
+
+  wrap.querySelectorAll('tr[data-investor-id]').forEach(row=>{
+    row.addEventListener('click', ()=> openInvestorProfile(row.dataset.investorId));
+  });
+}
+
+// ---------- Rendering: Borrower list ----------
+
+function renderBorrowerList(){
+  const searchEl = document.getElementById('borrowerSearch');
+  const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
+  const countEl = document.getElementById('borrowerCount');
+  if (countEl) countEl.textContent = `(${state.borrowers.length} total)`;
+
+  let list = state.borrowers;
+  if (q){
+    list = list.filter(b =>
+      (b.name||'').toLowerCase().includes(q) ||
+      (b.id||'').toLowerCase().includes(q) ||
+      (b.mobile||'').toString().includes(q)
+    );
+  }
+  list = [...list].sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+
+  const wrap = document.getElementById('borrowerListWrap');
+  if (!wrap) return;
+  if (!list.length){
+    wrap.innerHTML = '<div class="empty-state">No borrowers found. Add one to get started &mdash; loans against them can be created once the Loans module is built.</div>';
+    return;
+  }
+
+  wrap.innerHTML = `<table class="ledger"><thead><tr>
+    <th>ID</th><th>Name</th><th>Mobile</th><th>References</th><th>Status</th>
+  </tr></thead><tbody>` + list.map(b=>{
+    const refCount = Array.isArray(b.references) ? b.references.length : 0;
+    return `<tr class="row-link" data-borrower-id="${b.id}">
+      <td data-label="ID">${b.id}</td>
+      <td data-label="Name" class="name-cell">${b.name}</td>
+      <td data-label="Mobile">${b.mobile||''}</td>
+      <td data-label="References">${refCount ? refCount + ' on file' : '&mdash;'}</td>
+      <td data-label="Status"><span class="tag ${b.status==='ACTIVE'?'active':'inactive'}">${b.status}</span></td>
+    </tr>`;
+  }).join('') + '</tbody></table>';
+
+  wrap.querySelectorAll('tr[data-borrower-id]').forEach(row=>{
+    row.addEventListener('click', ()=> openBorrowerModal(state.borrowers.find(b=> String(b.id)===row.dataset.borrowerId)));
+  });
+}
+
+// ---------- Combined Ledger (all investors, all accounts) ----------
+
+function renderCombinedLedger(){
+  const sel = document.getElementById('ledgerInvestorFilter');
+  const current = sel.value;
+  const sorted = [...state.investors].sort((a,b)=> a.name.localeCompare(b.name));
+  sel.innerHTML = '<option value="">All Investors</option>' +
+    sorted.map(i=> `<option value="${i.id}">${i.name} (${i.id})</option>`).join('');
+  if (current) sel.value = current;
+
+  const filterId = sel.value;
+  let txns = [...state.transactions];
+  if (filterId){
+    txns = txns.filter(t=> String(t.investorId)===String(filterId));
+  }
+  txns.sort((a,b)=> new Date(b.txnDate) - new Date(a.txnDate) || new Date(b.createdAt) - new Date(a.createdAt));
+
+  const wrap = document.getElementById('combinedLedgerWrap');
+  if (!txns.length){
+    wrap.innerHTML = '<div class="empty-state">No transactions recorded yet.</div>';
+    return;
+  }
+
+  wrap.innerHTML = `<table class="ledger"><thead><tr>
+    <th>Date</th><th>Investor</th><th>Account</th><th>Type</th>
+    <th class="num">Amount</th><th class="num">Interest Added</th><th class="num">Balance After</th><th>Actions</th>
+  </tr></thead><tbody>` + txns.map(t=>{
+    const inv = state.investors.find(i=> String(i.id)===String(t.investorId));
+    const acc = state.accounts.find(a=> String(a.id)===String(t.accountId));
+    return `<tr class="row-link" data-investor-id="${t.investorId}">
+      <td data-label="Date">${fmtDate(t.txnDate)}</td>
+      <td data-label="Investor" class="name-cell">${inv ? inv.name : t.investorId}</td>
+      <td data-label="Account">${acc ? acc.accountNo : ''}</td>
+      <td data-label="Type"><span class="tag ${txnTagClass(t.txnType)}">${t.txnType.replace('_',' ')}</span></td>
+      <td data-label="Amount" class="num">${fmtMoney(Number(t.amount))}</td>
+      <td data-label="Interest Added" class="num">${fmtMoney(Number(t.interestAdded||0))}</td>
+      <td data-label="Balance After" class="num">${fmtMoney(Number(t.balanceAfter))}</td>
+      <td data-label="Actions">${txnActionIcons(t.id)}</td>
+    </tr>`;
+  }).join('') + '</tbody></table>';
+
+  wrap.querySelectorAll('tr[data-investor-id]').forEach(row=>{
+    row.addEventListener('click', (e)=>{
+      if (e.target.closest('.txn-action-btn')) return;
+      openInvestorProfile(row.dataset.investorId);
+    });
+  });
+  wireTxnActionIcons(wrap);
+}
+
+document.getElementById('ledgerInvestorFilter').addEventListener('change', renderCombinedLedger);
+
+// ---------- Investor profile ----------
+
+function openInvestorProfile(id){
+  state.selectedInvestorId = id;
+  showScreen('investor-profile');
+  renderInvestorProfile(id);
+}
+
+function renderInvestorProfile(id){
+  const inv = state.investors.find(i=> String(i.id)===String(id));
+  if (!inv){ showScreen('investors'); return; }
+
+  document.getElementById('profName').textContent = `${inv.name} `;
+  document.getElementById('profName').innerHTML = `${inv.name} <span style="font-family:var(--mono);font-size:.7em;color:var(--muted);">${inv.id}</span>`;
+  const metaParts = [];
+  if (inv.fatherName) metaParts.push(`S/o ${inv.fatherName}`);
+  metaParts.push(inv.mobile || 'No mobile on file');
+  if (inv.address) metaParts.push(inv.address);
+  document.getElementById('profMeta').textContent = metaParts.join(' · ');
+
+  const btnToggle = document.getElementById('btnToggleStatus');
+  btnToggle.textContent = inv.status === 'ACTIVE' ? 'Deactivate' : 'Reactivate';
+
+  const accs = state.accounts.filter(a=> String(a.investorId)===String(inv.id));
+  const activeAccs = accs.filter(a=> a.status==='ACTIVE');
+  const runningBalance = activeAccs.reduce((s,a)=> s + Number(a.runningBalance||0), 0);
+  const accrued = activeAccs.reduce((s,a)=> s + Number(a.accruedInterest||0), 0);
+
+  document.getElementById('profMetrics').innerHTML = [
+    ['Active Accounts', activeAccs.length],
+    ['Running Balance', fmtMoney(runningBalance)],
+    ['Accrued Interest', fmtMoney(accrued)],
+    ['Total Liability', fmtMoney(runningBalance+accrued)]
+  ].map(([l,v])=> `<div class="metric"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
+
+  const accWrap = document.getElementById('profAccounts');
+  if (!accs.length){
+    accWrap.innerHTML = '<div class="empty-state">No investment accounts yet.</div>';
+  } else {
+    accWrap.innerHTML = `<table class="ledger"><thead><tr>
+      <th>Account No.</th><th>Opened</th><th class="num">Opening Amt</th><th class="num">ROI</th>
+      <th class="num">Running Bal.</th><th class="num">Accrued Int.</th><th class="num">Current Value</th><th>Status</th><th>Actions</th>
+    </tr></thead><tbody>` + [...accs].sort((a,b)=> a.accountNo.localeCompare(b.accountNo)).map(a=>`
+      <tr>
+        <td data-label="Account No.">${a.accountNo}</td>
+        <td data-label="Opened">${fmtDate(a.openingDate)}</td>
+        <td data-label="Opening Amt" class="num">${fmtMoney(Number(a.openingAmount))}</td>
+        <td data-label="ROI" class="num">${Number(a.roi).toFixed(2)}%</td>
+        <td data-label="Running Bal." class="num">${fmtMoney(Number(a.runningBalance))}</td>
+        <td data-label="Accrued Int." class="num">${fmtMoney(Number(a.accruedInterest))}</td>
+        <td data-label="Current Value" class="num">${fmtMoney(Number(a.currentValue))}</td>
+        <td data-label="Status"><span class="tag ${a.status==='ACTIVE'?'active':'closed'}">${a.status}</span></td>
+        <td data-label="Actions"><button class="txn-action-btn delete" data-account-delete-id="${a.id}" title="Delete Account">&#128465;</button></td>
+      </tr>`).join('') + `<tr class="ledger-total">
+        <td data-label="Account No.">TOTAL</td>
+        <td data-label="Opened"></td>
+        <td data-label="Opening Amt" class="num"></td>
+        <td data-label="ROI" class="num"></td>
+        <td data-label="Running Bal." class="num" style="font-weight:700;">${fmtMoney(runningBalance)}</td>
+        <td data-label="Accrued Int." class="num" style="font-weight:700;">${fmtMoney(accrued)}</td>
+        <td data-label="Current Value" class="num" style="font-weight:700;">${fmtMoney(runningBalance+accrued)}</td>
+        <td data-label="Status"></td>
+        <td data-label="Actions"></td>
+      </tr>` + '</tbody></table>';
+
+    accWrap.querySelectorAll('[data-account-delete-id]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const account = accs.find(a=> String(a.id)===String(btn.dataset.accountDeleteId));
+        if (account) deleteAccountFlow(account);
+      });
+    });
+  }
+
+  const ledgerWrap = document.getElementById('profLedger');
+  const accIds = new Set(accs.map(a=>a.id));
+  const txns = state.transactions
+    .filter(t=> accIds.has(t.accountId))
+    .sort((a,b)=> new Date(a.txnDate) - new Date(b.txnDate) || new Date(a.createdAt)-new Date(b.createdAt));
+
+  if (!txns.length){
+    ledgerWrap.innerHTML = '<div class="empty-state">No transactions yet.</div>';
+  } else {
+    ledgerWrap.innerHTML = `<table class="ledger"><thead><tr>
+      <th>Date</th><th>Account</th><th>Type</th><th class="num">Amount</th><th class="num">Interest Added</th><th class="num">Balance After</th><th>Actions</th>
+    </tr></thead><tbody>` + txns.map(t=>{
+      const acc = accs.find(a=> a.id===t.accountId);
+      return `<tr>
+        <td data-label="Date">${fmtDate(t.txnDate)}</td>
+        <td data-label="Account">${acc ? acc.accountNo : ''}</td>
+        <td data-label="Type"><span class="tag ${txnTagClass(t.txnType)}">${t.txnType.replace('_',' ')}</span></td>
+        <td data-label="Amount" class="num">${fmtMoney(Number(t.amount))}</td>
+        <td data-label="Interest Added" class="num">${fmtMoney(Number(t.interestAdded||0))}</td>
+        <td data-label="Balance After" class="num">${fmtMoney(Number(t.balanceAfter))}</td>
+        <td data-label="Actions">${txnActionIcons(t.id)}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+    wireTxnActionIcons(ledgerWrap);
+  }
+}
+
+document.getElementById('btnToggleStatus').addEventListener('click', async ()=>{
+  const inv = state.investors.find(i=> String(i.id)===String(state.selectedInvestorId));
+  if (!inv) return;
+  const newStatus = inv.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+  try{
+    await apiPost('setInvestorStatus', {id: inv.id, status: newStatus});
+    toast(`${inv.name} marked ${newStatus}.`);
+    await refreshAll();
+  }catch(err){ toast('Failed: ' + err.message, true); }
+});
+
+document.getElementById('btnEditInvestor').addEventListener('click', ()=>{
+  const inv = state.investors.find(i=> String(i.id)===String(state.selectedInvestorId));
+  if (!inv) return;
+  openInvestorModal(inv);
+});
+
+document.getElementById('btnDeleteInvestor').addEventListener('click', async ()=>{
+  const inv = state.investors.find(i=> String(i.id)===String(state.selectedInvestorId));
+  if (!inv) return;
+
+  const accs = state.accounts.filter(a=> String(a.investorId)===String(inv.id));
+  const accIds = new Set(accs.map(a=>a.id));
+  const txns = state.transactions.filter(t=> accIds.has(t.accountId));
+  const totalValue = accs.reduce((s,a)=> s + Number(a.currentValue||0), 0);
+
+  let msg = `Delete ${inv.name} (${inv.id}) permanently?`;
+  if (accs.length || txns.length){
+    msg += `\n\nThis investor has ${accs.length} account(s) and ${txns.length} transaction(s), ` +
+           `totalling approximately ${fmtMoney(totalValue)} in current value. ` +
+           `Deleting the investor record is permanent and cannot be undone. ` +
+           `(Their accounts and transactions will remain in the underlying records but ` +
+           `will no longer appear against this investor anywhere in the app.)`;
+  } else {
+    msg += ' This investor has no accounts or transactions yet.';
+  }
+
+  if (!confirm(msg)) return;
+
+  const btn = document.getElementById('btnDeleteInvestor');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try{
+    await apiPost('deleteInvestor', {id: inv.id});
+    toast(`${inv.name} deleted.`);
+    state.selectedInvestorId = null;
+    showScreen('investors');
+    showSubScreen('inv-mgmt');
+    await refreshAll();
+  }catch(err){
+    toast('Failed to delete: ' + err.message, true);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Delete';
+  }
+});
+
+// ---------- Add / Edit investor modal ----------
+
+function openInvestorModal(investor){
+  state.editingInvestorId = investor ? investor.id : null;
+  document.getElementById('investorModalTitle').textContent = investor ? 'Edit Investor' : 'Add Investor';
+  document.getElementById('mInvName').value = investor ? investor.name : '';
+  document.getElementById('mInvFatherName').value = investor ? (investor.fatherName || '') : '';
+  document.getElementById('mInvAddress').value = investor ? investor.address : '';
+  document.getElementById('mInvMobile').value = investor ? investor.mobile : '';
+  document.getElementById('mInvRemarks').value = investor ? investor.remarks : '';
+  document.getElementById('modalError').classList.remove('show');
+  document.getElementById('investorModal').classList.add('show');
+}
+function closeInvestorModal(){
+  document.getElementById('investorModal').classList.remove('show');
+}
+document.getElementById('btnAddInvestor').addEventListener('click', ()=> openInvestorModal(null));
+document.getElementById('btnModalCancel').addEventListener('click', closeInvestorModal);
+
+document.getElementById('btnModalSave').addEventListener('click', async ()=>{
+  const name = document.getElementById('mInvName').value.trim();
+  const fatherName = document.getElementById('mInvFatherName').value.trim();
+  const address = document.getElementById('mInvAddress').value.trim();
+  const mobile = document.getElementById('mInvMobile').value.trim();
+  const remarks = document.getElementById('mInvRemarks').value.trim();
+  const errEl = document.getElementById('modalError');
+
+  if (!name){ errEl.textContent = 'Investor name is required.'; errEl.classList.add('show'); return; }
+  if (!/^\d{10}$/.test(mobile)){ errEl.textContent = 'Mobile number must be exactly 10 digits.'; errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+
+  const btn = document.getElementById('btnModalSave');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    if (state.editingInvestorId){
+      await apiPost('editInvestor', {id: state.editingInvestorId, name, fatherName, address, mobile, remarks});
+      toast('Investor updated.');
+    } else {
+      await apiPost('addInvestor', {name, fatherName, address, mobile, remarks});
+      toast('Investor added.');
+    }
+    closeInvestorModal();
+    await refreshAll();
+  }catch(err){
+    errEl.textContent = err.message; errEl.classList.add('show');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save Investor';
+  }
+});
+
+document.getElementById('investorSearch').addEventListener('input', renderInvestorList);
+
+// ---------- Borrower modal ----------
+
+let borrowerRefRows = []; // working copy of references while the modal is open
+
+function renderBorrowerRefRows(){
+  const wrap = document.getElementById('borrowerRefList');
+  if (!borrowerRefRows.length){
+    wrap.innerHTML = '<div class="hint" style="margin:0 0 .5rem;">No references added yet.</div>';
+    return;
+  }
+  wrap.innerHTML = borrowerRefRows.map((r, i)=> `
+    <div class="reference-row" data-idx="${i}">
+      <div><label>Name</label><input type="text" class="ref-name" value="${r.name||''}"></div>
+      <div><label>Relation</label>
+        <select class="ref-relation">
+          ${['Father','Mother','Brother','Sister','Spouse','Son','Daughter','Friend','Employer','Other'].map(opt=>
+            `<option value="${opt}" ${r.relation===opt?'selected':''}>${opt}</option>`).join('')}
+        </select>
+      </div>
+      <div><label>Phone</label><input type="tel" class="ref-phone" maxlength="10" value="${r.phone||''}"></div>
+      <div><label>Address (optional)</label><input type="text" class="ref-address" value="${r.address||''}"></div>
+      <button type="button" class="rm-ref">Remove</button>
+    </div>`).join('');
+
+  wrap.querySelectorAll('.reference-row').forEach(rowEl=>{
+    const idx = Number(rowEl.dataset.idx);
+    rowEl.querySelector('.ref-name').addEventListener('input', e=> borrowerRefRows[idx].name = e.target.value);
+    rowEl.querySelector('.ref-relation').addEventListener('change', e=> borrowerRefRows[idx].relation = e.target.value);
+    rowEl.querySelector('.ref-phone').addEventListener('input', e=> borrowerRefRows[idx].phone = e.target.value);
+    rowEl.querySelector('.ref-address').addEventListener('input', e=> borrowerRefRows[idx].address = e.target.value);
+    rowEl.querySelector('.rm-ref').addEventListener('click', ()=>{
+      borrowerRefRows.splice(idx, 1);
+      renderBorrowerRefRows();
+    });
+  });
+}
+
+document.getElementById('btnAddReference').addEventListener('click', ()=>{
+  if (borrowerRefRows.length >= 3){ toast('Up to 3 references only.', true); return; }
+  borrowerRefRows.push({name:'', relation:'Father', phone:'', address:''});
+  renderBorrowerRefRows();
+});
+
+function openBorrowerModal(borrower){
+  state.editingBorrowerId = borrower ? borrower.id : null;
+  document.getElementById('borrowerModalTitle').textContent = borrower ? `Edit Borrower — ${borrower.id}` : 'Add Borrower';
+  document.getElementById('mBrwName').value = borrower ? borrower.name : '';
+  document.getElementById('mBrwFatherName').value = borrower ? (borrower.fatherName || '') : '';
+  document.getElementById('mBrwAddress').value = borrower ? borrower.address : '';
+  document.getElementById('mBrwMobile').value = borrower ? borrower.mobile : '';
+  document.getElementById('mBrwRemarks').value = borrower ? borrower.remarks : '';
+  borrowerRefRows = borrower && Array.isArray(borrower.references)
+    ? borrower.references.map(r=> ({...r}))
+    : [];
+  renderBorrowerRefRows();
+  document.getElementById('borrowerModalError').classList.remove('show');
+  document.getElementById('borrowerModal').classList.add('show');
+}
+function closeBorrowerModal(){
+  document.getElementById('borrowerModal').classList.remove('show');
+}
+document.getElementById('btnAddBorrower').addEventListener('click', ()=> openBorrowerModal(null));
+document.getElementById('btnBorrowerModalCancel').addEventListener('click', closeBorrowerModal);
+
+document.getElementById('btnBorrowerModalSave').addEventListener('click', async ()=>{
+  const name = document.getElementById('mBrwName').value.trim();
+  const fatherName = document.getElementById('mBrwFatherName').value.trim();
+  const address = document.getElementById('mBrwAddress').value.trim();
+  const mobile = document.getElementById('mBrwMobile').value.trim();
+  const remarks = document.getElementById('mBrwRemarks').value.trim();
+  const errEl = document.getElementById('borrowerModalError');
+
+  if (!name){ errEl.textContent = 'Borrower name is required.'; errEl.classList.add('show'); return; }
+  if (!/^\d{10}$/.test(mobile)){ errEl.textContent = 'Mobile number must be exactly 10 digits.'; errEl.classList.add('show'); return; }
+  const cleanRefs = borrowerRefRows
+    .filter(r=> (r.name||'').trim())
+    .map(r=> ({
+      name: (r.name||'').trim(),
+      relation: r.relation || 'Other',
+      phone: (r.phone||'').trim(),
+      address: (r.address||'').trim()
+    }));
+  const badPhone = cleanRefs.find(r=> r.phone && !/^\d{10}$/.test(r.phone));
+  if (badPhone){ errEl.textContent = `Reference phone for "${badPhone.name}" must be exactly 10 digits.`; errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+
+  const btn = document.getElementById('btnBorrowerModalSave');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    if (state.editingBorrowerId){
+      await apiPost('editBorrower', {id: state.editingBorrowerId, name, fatherName, address, mobile, remarks, references: cleanRefs});
+      toast('Borrower updated.');
+    } else {
+      await apiPost('addBorrower', {name, fatherName, address, mobile, remarks, references: cleanRefs});
+      toast('Borrower added.');
+    }
+    closeBorrowerModal();
+    await refreshAll();
+  }catch(err){
+    errEl.textContent = err.message; errEl.classList.add('show');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save Borrower';
+  }
+});
+
+document.getElementById('borrowerSearch').addEventListener('input', renderBorrowerList);
+
+// ---------- Transaction Edit / Delete ----------
+
+let editingTxnId = null;
+
+function openTxnEditModal(txn){
+  editingTxnId = txn.id;
+  const acc = state.accounts.find(a=> String(a.id)===String(txn.accountId));
+  const inv = state.investors.find(i=> String(i.id)===String(txn.investorId));
+  document.getElementById('txnEditContext').textContent =
+    `${txn.txnType.replace('_',' ')} · ${inv ? inv.name : txn.investorId} · ${acc ? acc.accountNo : ''} (ROI ${acc ? Number(acc.roi).toFixed(2) : '—'}% — locked)`;
+
+  document.getElementById('teDate').value = (txn.txnDate || '').slice(0,10);
+  document.getElementById('teAmount').value = txn.amount;
+  document.getElementById('tePaymentMode').value = txn.paymentMode || '';
+  document.getElementById('teChequeNo').value = txn.chequeNo || '';
+  document.getElementById('teChequeDate').value = (txn.chequeDate || '').slice(0,10);
+  document.getElementById('teDrawnOnBank').value = txn.drawnOnBank || '';
+  document.getElementById('teTxnRefNo').value = txn.txnRefNo || '';
+  document.getElementById('teNarration').value = txn.narration || '';
+  document.getElementById('teRemarks').value = txn.remarks || '';
+  document.getElementById('teCreditAccountNo').value = txn.creditAccountNo || '';
+  document.getElementById('teCreditAccountName').value = txn.creditAccountName || '';
+
+  const mode = txn.paymentMode || '';
+  document.getElementById('teChequeFields').style.display = (mode === 'Cheque') ? 'block' : 'none';
+  document.getElementById('teRefFields').style.display =
+    ['UPI','NEFT','RTGS','IMPS','Bank Transfer'].includes(mode) ? 'block' : 'none';
+
+  document.getElementById('teError').classList.remove('show');
+  document.getElementById('txnEditModal').classList.add('show');
+}
+
+function closeTxnEditModal(){
+  document.getElementById('txnEditModal').classList.remove('show');
+  editingTxnId = null;
+}
+
+document.getElementById('btnTxnEditCancel').addEventListener('click', closeTxnEditModal);
+
+document.getElementById('tePaymentMode').addEventListener('change', ()=>{
+  const mode = document.getElementById('tePaymentMode').value;
+  document.getElementById('teChequeFields').style.display = (mode === 'Cheque') ? 'block' : 'none';
+  document.getElementById('teRefFields').style.display =
+    ['UPI','NEFT','RTGS','IMPS','Bank Transfer'].includes(mode) ? 'block' : 'none';
+});
+
+document.getElementById('btnTxnEditSave').addEventListener('click', async ()=>{
+  if (!editingTxnId) return;
+  const errEl = document.getElementById('teError');
+  const txnDate = document.getElementById('teDate').value;
+  const amount = parseFloat(document.getElementById('teAmount').value);
+
+  if (!txnDate){ errEl.textContent = 'Date is required.'; errEl.classList.add('show'); return; }
+  if (!(amount > 0)){ errEl.textContent = 'Amount must be greater than zero.'; errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+
+  const payload = {
+    id: editingTxnId,
+    txnDate,
+    amount,
+    paymentMode: document.getElementById('tePaymentMode').value,
+    chequeNo: document.getElementById('teChequeNo').value.trim(),
+    chequeDate: document.getElementById('teChequeDate').value,
+    drawnOnBank: document.getElementById('teDrawnOnBank').value.trim(),
+    txnRefNo: document.getElementById('teTxnRefNo').value.trim(),
+    narration: document.getElementById('teNarration').value.trim(),
+    remarks: document.getElementById('teRemarks').value.trim(),
+    creditAccountNo: document.getElementById('teCreditAccountNo').value.trim(),
+    creditAccountName: document.getElementById('teCreditAccountName').value.trim()
+  };
+
+  const btn = document.getElementById('btnTxnEditSave');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    await apiPost('editTransaction', payload);
+    toast('Transaction updated — balances recalculated.');
+    closeTxnEditModal();
+    await refreshAll();
+  }catch(err){
+    errEl.textContent = err.message; errEl.classList.add('show');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
+});
+
+async function deleteTransactionFlow(txn){
+  const acc = state.accounts.find(a=> String(a.id)===String(txn.accountId));
+  const inv = state.investors.find(i=> String(i.id)===String(txn.investorId));
+
+  const msg = `Delete this transaction?\n\n` +
+    `${txn.txnType.replace('_',' ')} of ${fmtMoney(Number(txn.amount))} on ${fmtDate(txn.txnDate)}\n` +
+    `Investor: ${inv ? inv.name : txn.investorId}\n` +
+    `Account: ${acc ? acc.accountNo : ''}\n\n` +
+    `This will recalculate all later balances on this account. This cannot be undone.`;
+
+  if (!confirm(msg)) return;
+
+  try{
+    await apiPost('deleteTransaction', {id: txn.id});
+    toast('Transaction deleted — balances recalculated.');
+    await refreshAll();
+  }catch(err){
+    toast('Failed to delete: ' + err.message, true);
+  }
+}
+
+async function deleteAccountFlow(account){
+  const accTxns = state.transactions.filter(t=> String(t.accountId)===String(account.id));
+  const msg = `Delete account ${account.accountNo}?\n\n` +
+    `Opened: ${fmtDate(account.openingDate)}\n` +
+    `ROI: ${Number(account.roi).toFixed(2)}% p.a.\n` +
+    `Current Value: ${fmtMoney(Number(account.currentValue||0))}\n` +
+    `Transactions on this account: ${accTxns.length}\n\n` +
+    `Deleting the account is permanent and cannot be undone. Its transaction history will no longer appear anywhere in the app.`;
+
+  if (!confirm(msg)) return;
+
+  try{
+    await apiPost('deleteAccount', {id: account.id});
+    toast(`Account ${account.accountNo} deleted.`);
+    await refreshAll();
+  }catch(err){
+    toast('Failed to delete account: ' + err.message, true);
+  }
+}
+
+// ---------- New investment form ----------
+
+// ---------- Deposits form state ----------
+
+const depositState = {
+  topUpAccountId: null // set when the admin chooses "Add to Existing Account"
+};
+
+function renderInvestmentForm(){
+  const sel = document.getElementById('invInvestor');
+  const current = sel.value;
+  const active = state.investors.filter(i=> i.status==='ACTIVE').sort((a,b)=> a.name.localeCompare(b.name));
+  sel.innerHTML = '<option value="">Select investor&hellip;</option>' +
+    active.map(i=> `<option value="${i.id}">${i.name} (${i.id})</option>`).join('');
+  if (current) sel.value = current;
+  renderInvExistingAccounts();
+}
+
+function renderInvExistingAccounts(){
+  const investorId = document.getElementById('invInvestor').value;
+  const wrap = document.getElementById('invExistingAccounts');
+  const listWrap = document.getElementById('invExistingAccountsList');
+
+  if (!investorId){
+    wrap.style.display = 'none';
+    return;
+  }
+  const accs = state.accounts.filter(a=> String(a.investorId)===String(investorId) && a.status==='ACTIVE');
+  if (!accs.length){
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  listWrap.innerHTML = accs.map(a=> `
+    <div class="account-option" style="cursor:default;">
+      <div>
+        <span class="a-no">${a.accountNo}</span><br>
+        <span style="font-size:.78rem;color:var(--muted);">Opened ${fmtDate(a.openingDate)}</span>
+      </div>
+      <div class="a-val">
+        <span class="lbl">ROI</span>${Number(a.roi).toFixed(2)}% p.a.
+      </div>
+    </div>`).join('');
+}
+
+function checkRoiMatch(){
+  const investorId = document.getElementById('invInvestor').value;
+  const roi = parseFloat(document.getElementById('invRoi').value);
+  const choiceBox = document.getElementById('invModeChoice');
+
+  if (depositState.topUpAccountId) return; // already committed to a top-up, don't re-check
+
+  if (!investorId || !(roi > 0)){
+    choiceBox.style.display = 'none';
+    return;
+  }
+  const accs = state.accounts.filter(a=> String(a.investorId)===String(investorId) && a.status==='ACTIVE');
+  const match = accs.find(a=> Math.abs(Number(a.roi) - roi) < 0.0001);
+
+  if (match){
+    document.getElementById('invMatchedRoi').textContent = Number(match.roi).toFixed(2);
+    choiceBox.style.display = 'block';
+    choiceBox.dataset.matchedAccountId = match.id;
+    choiceBox.dataset.matchedAccountNo = match.accountNo;
+  } else {
+    choiceBox.style.display = 'none';
+  }
+}
+
+document.getElementById('invInvestor').addEventListener('change', ()=>{
+  clearTopUpMode();
+  renderInvExistingAccounts();
+  checkRoiMatch();
+});
+document.getElementById('invRoi').addEventListener('input', checkRoiMatch);
+
+document.getElementById('btnChooseTopup').addEventListener('click', ()=>{
+  const choiceBox = document.getElementById('invModeChoice');
+  const accountId = choiceBox.dataset.matchedAccountId;
+  const accountNo = choiceBox.dataset.matchedAccountNo;
+  setTopUpMode(accountId, accountNo);
+});
+
+document.getElementById('btnChooseNew').addEventListener('click', ()=>{
+  const choiceBox = document.getElementById('invModeChoice');
+  const roi = choiceBox.dataset.matchedAccountNo;
+  if (!confirm(`An account already exists for this investor at this ROI. Create a new account anyway?`)) return;
+  choiceBox.style.display = 'none';
+});
+
+function setTopUpMode(accountId, accountNo){
+  depositState.topUpAccountId = accountId;
+  document.getElementById('invModeChoice').style.display = 'none';
+  document.getElementById('invRoiRow').style.display = 'none';
+  document.getElementById('invTopupNotice').style.display = 'block';
+  document.getElementById('invTopupAccountLabel').textContent = accountNo;
+  document.getElementById('btnSubmitInvestment').textContent = 'Add Funds to Account';
+  document.getElementById('invHintText').textContent = 'This deposit will be added to the selected existing account at its current ROI, as a top-up transaction.';
+}
+
+function clearTopUpMode(){
+  depositState.topUpAccountId = null;
+  document.getElementById('invRoiRow').style.display = 'grid';
+  document.getElementById('invTopupNotice').style.display = 'none';
+  document.getElementById('btnSubmitInvestment').textContent = 'Create Investment Account';
+  document.getElementById('invHintText').textContent = 'A new, separately numbered account is created for every investment — even for an investor who already holds active accounts. This keeps each ROI and date isolated.';
+}
+
+document.getElementById('invCancelTopup').addEventListener('click', ()=>{
+  clearTopUpMode();
+  checkRoiMatch();
+});
+
+// ---------- Payment mode conditional fields ----------
+
+document.getElementById('invPaymentMode').addEventListener('change', ()=>{
+  const mode = document.getElementById('invPaymentMode').value;
+  document.getElementById('invChequeFields').style.display = (mode === 'Cheque') ? 'block' : 'none';
+  document.getElementById('invRefFields').style.display =
+    ['UPI','NEFT','RTGS','IMPS','Bank Transfer'].includes(mode) ? 'block' : 'none';
+});
+
+// ---------- Submit ----------
+
+document.getElementById('btnSubmitInvestment').addEventListener('click', async ()=>{
+  const investorId = document.getElementById('invInvestor').value;
+  const amount = parseFloat(document.getElementById('invAmount').value);
+  const date = document.getElementById('invDate').value;
+  const roi = parseFloat(document.getElementById('invRoi').value);
+  const remarks = document.getElementById('invRemarks').value.trim();
+  const paymentMode = document.getElementById('invPaymentMode').value;
+  const chequeNo = document.getElementById('invChequeNo').value.trim();
+  const chequeDate = document.getElementById('invChequeDate').value;
+  const drawnOnBank = document.getElementById('invDrawnOnBank').value.trim();
+  const txnRefNo = document.getElementById('invTxnRefNo').value.trim();
+  const narration = document.getElementById('invNarration').value.trim();
+  const creditAccountNo = document.getElementById('invCreditAccountNo').value.trim();
+  const creditAccountName = document.getElementById('invCreditAccountName').value.trim();
+  const errEl = document.getElementById('invError');
+
+  if (!investorId){ errEl.textContent = 'Select an investor.'; errEl.classList.add('show'); return; }
+  if (!(amount > 0)){ errEl.textContent = 'Investment amount must be greater than zero.'; errEl.classList.add('show'); return; }
+  if (!date){ errEl.textContent = 'Investment date is required.'; errEl.classList.add('show'); return; }
+  if (!depositState.topUpAccountId && !(roi > 0)){ errEl.textContent = 'ROI must be greater than zero.'; errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+
+  const payload = {
+    investorId, amount, date, roi, remarks,
+    paymentMode, chequeNo, chequeDate, drawnOnBank, txnRefNo,
+    narration, creditAccountNo, creditAccountName
+  };
+  if (depositState.topUpAccountId) payload.topUpAccountId = depositState.topUpAccountId;
+
+  const btn = document.getElementById('btnSubmitInvestment');
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const res = await apiPost('addInvestment', payload);
+    const investor = state.investors.find(i=> String(i.id)===String(investorId));
+    const accountNo = res.account ? res.account.accountNo : (document.getElementById('invModeChoice').dataset.matchedAccountNo || '');
+    toast(res.topUp ? `Funds added to ${accountNo}.` : `Account ${accountNo} created.`);
+
+    generateReceiptPdf({
+      investor, accountNo, amount, date, roi: depositState.topUpAccountId ? null : roi,
+      transaction: res.transaction
+    });
+
+    document.getElementById('invAmount').value = '';
+    document.getElementById('invRoi').value = '';
+    document.getElementById('invRemarks').value = '';
+    document.getElementById('invPaymentMode').value = '';
+    document.getElementById('invChequeNo').value = '';
+    document.getElementById('invChequeDate').value = '';
+    document.getElementById('invDrawnOnBank').value = '';
+    document.getElementById('invTxnRefNo').value = '';
+    document.getElementById('invNarration').value = '';
+    document.getElementById('invCreditAccountNo').value = '';
+    document.getElementById('invCreditAccountName').value = '';
+    document.getElementById('invChequeFields').style.display = 'none';
+    document.getElementById('invRefFields').style.display = 'none';
+    clearTopUpMode();
+    await refreshAll();
+  }catch(err){
+    errEl.textContent = err.message; errEl.classList.add('show');
+  }finally{
+    btn.disabled = false; btn.textContent = depositState.topUpAccountId ? 'Add Funds to Account' : originalLabel;
+  }
+});
+
+// ---------- Withdrawal form ----------
+
+function renderWithdrawalForm(){
+  const sel = document.getElementById('wdInvestor');
+  const current = sel.value;
+  const active = state.investors.filter(i=> i.status==='ACTIVE').sort((a,b)=> a.name.localeCompare(b.name));
+  sel.innerHTML = '<option value="">Select investor&hellip;</option>' +
+    active.map(i=> `<option value="${i.id}">${i.name} (${i.id})</option>`).join('');
+  if (current) sel.value = current;
+  renderWithdrawAccountList();
+}
+
+function renderWithdrawAccountList(){
+  const investorId = document.getElementById('wdInvestor').value;
+  const wrap = document.getElementById('wdAccountList');
+  state.selectedWithdrawAccountId = null;
+  updateWithdrawPreview();
+
+  if (!investorId){
+    wrap.innerHTML = '<div class="empty-state">Select an investor to see their accounts.</div>';
+    return;
+  }
+  const accs = state.accounts.filter(a=> String(a.investorId)===String(investorId) && a.status==='ACTIVE');
+  if (!accs.length){
+    wrap.innerHTML = '<div class="empty-state">This investor has no active accounts.</div>';
+    return;
+  }
+  wrap.innerHTML = accs.map(a=> `
+    <label class="account-option" data-account-id="${a.id}">
+      <span class="a-main">
+        <input type="radio" name="wdAccountRadio" value="${a.id}">
+        <span>
+          <span class="a-no">${a.accountNo}</span><br>
+          <span style="font-size:.78rem;color:var(--muted);">Opened ${fmtDate(a.openingDate)} &middot; ${Number(a.roi).toFixed(2)}% p.a.</span>
+        </span>
+      </span>
+      <span class="a-val">
+        <span class="lbl">Current Value</span>${fmtMoney(Number(a.currentValue))}
+      </span>
+    </label>`).join('');
+
+  wrap.querySelectorAll('.account-option').forEach(el=>{
+    const radio = el.querySelector('input[type="radio"]');
+    el.addEventListener('click', ()=>{
+      radio.checked = true;
+      wrap.querySelectorAll('.account-option').forEach(o=> o.classList.remove('selected'));
+      el.classList.add('selected');
+      state.selectedWithdrawAccountId = el.dataset.accountId;
+      updateWithdrawPreview();
+    });
+  });
+}
+
+function updateWithdrawPreview(){
+  const previewBox = document.getElementById('wdPreview');
+  const btnSubmit = document.getElementById('btnSubmitWithdrawal');
+  const btnFull = document.getElementById('btnFullSettle');
+  const errEl = document.getElementById('wdError');
+  errEl.classList.remove('show');
+
+  if (!state.selectedWithdrawAccountId){
+    previewBox.style.display = 'none';
+    // Deliberately NOT disabled: a disabled button can't be clicked, so
+    // there'd be no way to tell the person *why* nothing's happening.
+    // Leaving it enabled lets submitWithdrawal() show a clear error
+    // ("Select an account to withdraw money") when they try.
+    btnSubmit.disabled = false;
+    btnFull.disabled = false;
+    return;
+  }
+  const acc = state.accounts.find(a=> String(a.id)===String(state.selectedWithdrawAccountId));
+  if (!acc) return;
+
+  const amount = parseFloat(document.getElementById('wdAmount').value) || 0;
+  const available = Number(acc.currentValue);
+
+  previewBox.style.display = 'block';
+  previewBox.innerHTML = `
+    <div class="pline"><span>Running balance</span><span>${fmtMoney(Number(acc.runningBalance))}</span></div>
+    <div class="pline"><span>Accrued interest to date</span><span>+ ${fmtMoney(Number(acc.accruedInterest))}</span></div>
+    <div class="pline total"><span>Available value</span><span>${fmtMoney(available)}</span></div>
+    ${amount>0 ? `<div class="pline" style="margin-top:.4rem;"><span>Withdrawal requested</span><span>- ${fmtMoney(amount)}</span></div>
+    <div class="pline total"><span>New balance</span><span>${fmtMoney(Math.max(available-amount,0))}</span></div>` : ''}
+  `;
+
+  btnFull.disabled = false;
+  btnSubmit.disabled = false;
+  if (amount > available){ errEl.textContent = 'Amount exceeds available value.'; errEl.classList.add('show'); }
+}
+
+document.getElementById('wdInvestor').addEventListener('change', renderWithdrawAccountList);
+document.getElementById('wdAmount').addEventListener('input', updateWithdrawPreview);
+
+async function submitWithdrawal(fullSettlement){
+  const accountId = state.selectedWithdrawAccountId;
+  const date = document.getElementById('wdDate').value || todayISO();
+  const remarks = document.getElementById('wdRemarks').value.trim();
+  const errEl = document.getElementById('wdError');
+
+  if (!accountId){ errEl.textContent = 'Select an account to withdraw money from.'; errEl.classList.add('show'); return; }
+
+  const acc = state.accounts.find(a=> String(a.id)===String(accountId));
+  let amount;
+  if (fullSettlement){
+    amount = Number(acc.currentValue);
+  } else {
+    amount = parseFloat(document.getElementById('wdAmount').value);
+    if (!(amount > 0)){ errEl.textContent = 'Enter a withdrawal amount.'; errEl.classList.add('show'); return; }
+  }
+
+  const btn = fullSettlement ? document.getElementById('btnFullSettle') : document.getElementById('btnSubmitWithdrawal');
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Processing…';
+  try{
+    const res = await apiPost('withdraw', {accountId, date, amount, remarks, fullSettlement});
+    toast(fullSettlement ? 'Account settled and closed.' : 'Withdrawal recorded.');
+
+    const investor = state.investors.find(i=> String(i.id)===String(acc.investorId));
+    generateReceiptPdf({
+      investor,
+      accountNo: acc.accountNo,
+      amount,
+      date,
+      roi: Number(acc.roi),
+      transaction: res.transaction,
+      direction: 'paid'
+    });
+
+    document.getElementById('wdAmount').value = '';
+    document.getElementById('wdRemarks').value = '';
+    state.selectedWithdrawAccountId = null;
+    await refreshAll();
+    renderWithdrawAccountList();
+  }catch(err){
+    errEl.textContent = err.message; errEl.classList.add('show');
+  }finally{
+    btn.disabled = false; btn.textContent = label;
+  }
+}
+document.getElementById('btnSubmitWithdrawal').addEventListener('click', ()=> submitWithdrawal(false));
+document.getElementById('btnFullSettle').addEventListener('click', ()=>{
+  const acc = state.accounts.find(a=> String(a.id)===String(state.selectedWithdrawAccountId));
+  if (!acc) return;
+  if (confirm(`Fully settle ${acc.accountNo} for ${fmtMoney(Number(acc.currentValue))} and close the account?`)){
+    submitWithdrawal(true);
+  }
+});
+
+// ---------- Reports ----------
+
+let lastReportData = null; // holds the most recently generated report for export
+
+function renderReportInvestorDropdown(){
+  const sel = document.getElementById('repInvestor');
+  const current = sel.value;
+  const sorted = [...state.investors].sort((a,b)=> a.name.localeCompare(b.name));
+  sel.innerHTML = '<option value="">All Investors (Combined)</option>' +
+    sorted.map(i=> `<option value="${i.id}">${i.name} (${i.id})</option>`).join('');
+  if (current) sel.value = current;
+}
+
+document.getElementById('btnGenerateReport').addEventListener('click', async ()=>{
+  const dateInput = document.getElementById('repAsOnDate').value;
+  const asOnDate = dateInput ? new Date(dateInput + 'T23:59:59').toISOString() : new Date().toISOString();
+  const investorId = document.getElementById('repInvestor').value;
+  const btn = document.getElementById('btnGenerateReport');
+
+  btn.disabled = true; btn.textContent = 'Generating…';
+  document.getElementById('reportResultCard').style.display = 'block';
+  document.getElementById('reportTitle').textContent = 'Report';
+  document.getElementById('reportBody').innerHTML =
+    '<div class="empty-state"><span class="spinner"></span>Please wait, fetching data&hellip;</div>';
+
+  try{
+    const res = await apiPost('getReportAsOf', { asOnDate, investorId: investorId || undefined });
+    lastReportData = res;
+    renderReportResult(res, investorId);
+    document.getElementById('reportResultCard').style.display = 'block';
+    toast('Report generated.');
+  }catch(err){
+    document.getElementById('reportBody').innerHTML =
+      '<div class="empty-state">Could not generate the report: ' + err.message + '</div>';
+    toast('Failed to generate report: ' + err.message, true);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Generate Report';
+  }
+});
+
+function renderReportResult(res, investorId){
+  const isSingle = !!investorId;
+  const titleEl = document.getElementById('reportTitle');
+  const bodyEl = document.getElementById('reportBody');
+  const btnAgreement = document.getElementById('btnGenerateAgreement');
+  const btnAgreementHindi = document.getElementById('btnGenerateAgreementHindi');
+
+  if (isSingle){
+    const row = res.report[0];
+    if (!row){
+      bodyEl.innerHTML = '<div class="empty-state">No data for this investor as of this date.</div>';
+      btnAgreement.style.display = 'none';
+      btnAgreementHindi.style.display = 'none';
+      return;
+    }
+    titleEl.textContent = `${row.investor.name} (${row.investor.id}) — as on ${fmtDate(res.asOnDate)}`;
+    bodyEl.innerHTML = renderInvestorReportTable(row);
+    btnAgreement.style.display = 'inline-block';
+    btnAgreementHindi.style.display = 'inline-block';
+    lastSingleReportRow = row;
+    lastSingleReportAsOnDate = res.asOnDate;
+  } else {
+    titleEl.textContent = `Combined Investor Report — as on ${fmtDate(res.asOnDate)}`;
+    let html = '';
+    res.report.forEach(row=>{
+      html += `<h3 style="font-size:.95rem;margin:1.2rem 0 .5rem;color:var(--ink);">${row.investor.name} <span style="font-family:var(--mono);font-size:.75em;color:var(--muted);">${row.investor.id}</span></h3>`;
+      html += renderInvestorReportTable(row);
+    });
+    html += `<div class="preview-box" style="margin-top:1.4rem;">
+      <div class="pline"><span>Grand Total — Running Balance</span><span>${fmtMoney(res.grandTotals.runningBalance)}</span></div>
+      <div class="pline"><span>Grand Total — Accrued Interest</span><span>${fmtMoney(res.grandTotals.accruedInterest)}</span></div>
+      <div class="pline total"><span>Grand Total — Current Value</span><span>${fmtMoney(res.grandTotals.currentValue)}</span></div>
+    </div>`;
+    bodyEl.innerHTML = html;
+    btnAgreement.style.display = 'none';
+    btnAgreementHindi.style.display = 'none';
+  }
+}
+
+let lastSingleReportRow = null;
+let lastSingleReportAsOnDate = null;
+
+function renderInvestorReportTable(row){
+  if (!row.accounts.length){
+    return '<div class="empty-state">No accounts open as of this date.</div>';
+  }
+  let html = `<table class="ledger"><thead><tr>
+    <th>Account No.</th><th>Opened</th><th class="num">Opening Amt</th><th class="num">ROI</th>
+    <th class="num">Running Bal.</th><th class="num">Accrued Int.</th><th class="num">Current Value</th><th>Status</th>
+  </tr></thead><tbody>`;
+  row.accounts.forEach(a=>{
+    html += `<tr>
+      <td>${a.accountNo}</td>
+      <td>${fmtDate(a.openingDate)}</td>
+      <td class="num">${fmtMoney(Number(a.openingAmount))}</td>
+      <td class="num">${Number(a.roi).toFixed(2)}%</td>
+      <td class="num">${fmtMoney(a.runningBalance)}</td>
+      <td class="num">${fmtMoney(a.accruedInterest)}</td>
+      <td class="num">${fmtMoney(a.currentValue)}</td>
+      <td><span class="tag ${a.statusAsOf==='ACTIVE'?'active':'closed'}">${a.statusAsOf}</span></td>
+    </tr>`;
+  });
+  html += `<tr>
+    <td colspan="4" style="font-weight:700;">TOTAL</td>
+    <td class="num" style="font-weight:700;">${fmtMoney(row.totals.runningBalance)}</td>
+    <td class="num" style="font-weight:700;">${fmtMoney(row.totals.accruedInterest)}</td>
+    <td class="num" style="font-weight:700;">${fmtMoney(row.totals.currentValue)}</td>
+    <td></td>
+  </tr></tbody></table>`;
+  return html;
+}
+
+// ---------- Number to words (Indian numbering: Lakh/Crore) ----------
+
+function numberToWordsIndian(num){
+  num = Math.round(num);
+  if (num === 0) return 'Zero';
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+    'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+
+  function twoDigits(n){
+    if (n < 20) return ones[n];
+    return tens[Math.floor(n/10)] + (n%10 ? ' ' + ones[n%10] : '');
+  }
+  function threeDigits(n){
+    if (n < 100) return twoDigits(n);
+    return ones[Math.floor(n/100)] + ' Hundred' + (n%100 ? ' ' + twoDigits(n%100) : '');
+  }
+
+  let result = '';
+  const crore = Math.floor(num / 10000000); num %= 10000000;
+  const lakh = Math.floor(num / 100000); num %= 100000;
+  const thousand = Math.floor(num / 1000); num %= 1000;
+  const rest = num;
+
+  if (crore) result += threeDigits(crore) + ' Crore ';
+  if (lakh) result += threeDigits(lakh) + ' Lakh ';
+  if (thousand) result += threeDigits(thousand) + ' Thousand ';
+  if (rest) result += threeDigits(rest);
+
+  return result.trim();
+}
+
+// ---------- Payment Receipt PDF (FinSphere format) ----------
+// Called right after a successful deposit / top-up. Pulls entirely
+// from the data just submitted plus the server's response (receiptNo).
+function generateReceiptPdf(ctx){
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a5', orientation: 'landscape' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 22;
+
+    // Outer double border, rounded corners feel via simple rect
+    doc.setDrawColor(20, 40, 90);
+    doc.setLineWidth(1.2);
+    doc.roundedRect(margin, margin, pageW - margin*2, pageH - margin*2, 8, 8);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(margin+4, margin+4, pageW - margin*2 - 8, pageH - margin*2 - 8, 6, 6);
+
+    let y = margin + 34;
+    const cx = pageW / 2;
+
+    // Firm name
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(26);
+    doc.setTextColor(20, 40, 90);
+    doc.text('T.P. FINANCE', cx, y, { align: 'center' });
+
+    // Payment Receipt / Payment Voucher pill (label depends on direction)
+    const isPaidOut = ctx.direction === 'paid';
+    const pillLabel = isPaidOut ? 'PAYMENT VOUCHER' : 'PAYMENT RECEIPT';
+    y += 22;
+    doc.setFillColor(20, 40, 90);
+    const pillW = 170, pillH = 20;
+    doc.roundedRect(cx - pillW/2, y - 14, pillW, pillH, 10, 10, 'F');
+    doc.setFontSize(11);
+    doc.setTextColor(255,255,255);
+    doc.text(pillLabel, cx, y, { align: 'center' });
+
+    // Receipt No. / Date row
+    y += 26;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(20,20,20);
+    doc.text(`Receipt No. ${ctx.transaction && ctx.transaction.receiptNo ? ctx.transaction.receiptNo : ''}`, margin + 14, y);
+    const dateLabel = fmtDate(ctx.date);
+    doc.text(`Date: ${dateLabel}`, pageW - margin - 14, y, { align: 'right' });
+
+    // Body fields
+    y += 24;
+    const labelX = margin + 14;
+    const lineEndX = pageW - margin - 14;
+
+    function fieldLine(label, value){
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
+      const labelWidth = doc.getTextWidth(label + ' ');
+      doc.text(label, labelX, y);
+      doc.setDrawColor(120,120,120);
+      doc.setLineWidth(0.4);
+      doc.line(labelX + labelWidth, y + 2, lineEndX, y + 2);
+      if (value){
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(value), labelX + labelWidth + 4, y);
+      }
+      y += 20;
+    }
+
+    const investorName = ctx.investor ? ctx.investor.name : '';
+    const amountWords = 'Rupees ' + numberToWordsIndian(ctx.amount) + ' Only';
+
+    fieldLine(isPaidOut ? 'Paid with thanks to' : 'Received with thanks from', investorName);
+    fieldLine('the sum of Rupees', fmtMoney(ctx.amount));
+    fieldLine('(in words)', amountWords);
+
+    const t = ctx.transaction || {};
+    const modeLine = t.paymentMode || '';
+    let modeDetail = '';
+    if (t.paymentMode === 'Cheque'){
+      modeDetail = [t.chequeNo ? `Cheque No. ${t.chequeNo}` : '', t.chequeDate ? `dated ${fmtDate(t.chequeDate)}` : '', t.drawnOnBank ? `drawn on ${t.drawnOnBank}` : ''].filter(Boolean).join(', ');
+    } else if (t.txnRefNo){
+      modeDetail = `Ref No. ${t.txnRefNo}`;
+    }
+    fieldLine('by Cash / UPI / Bank Transfer / Cheque No.', modeLine + (modeDetail ? ' — ' + modeDetail : ''));
+
+    const towardsText = ctx.accountNo
+      ? `Investment Account ${ctx.accountNo}${ctx.roi ? ' at ' + Number(ctx.roi).toFixed(2) + '% p.a.' : ''}`
+      : '';
+    fieldLine('towards', towardsText);
+
+    if (t.narration){
+      fieldLine('Narration:', t.narration);
+    } else {
+      fieldLine('Narration:', '');
+    }
+
+    // Admin credit account section — only if filled
+    if (t.creditAccountNo || t.creditAccountName){
+      y += 2;
+      doc.setFontSize(9);
+      doc.setTextColor(90,90,90);
+      const creditLine = [
+        t.creditAccountName ? `Credited to: ${t.creditAccountName}` : '',
+        t.creditAccountNo ? `A/c No. ${t.creditAccountNo}` : ''
+      ].filter(Boolean).join('  ·  ');
+      doc.text(creditLine, labelX, y);
+      y += 16;
+      doc.setTextColor(20,20,20);
+    }
+
+    // Divider line
+    y += 6;
+    doc.setDrawColor(20,40,90);
+    doc.setLineWidth(0.7);
+    doc.line(margin + 10, y, pageW - margin - 10, y);
+
+    // Footer: contact info (left) + signatory (right)
+    y += 22;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(20,20,20);
+    doc.text('PHONE NO 8864904977', labelX, y);
+    doc.text('ALTERNATE NO +91 80775 00156', labelX, y + 14);
+
+    const rightX = pageW - margin - 14;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20,40,90);
+    doc.text('For T.P. Finance', rightX, y, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(20,20,20);
+    doc.text('Authorised Signatory', rightX, y + 14, { align: 'right' });
+    doc.text('Name: Rajendra Singh', rightX, y + 40, { align: 'right' });
+
+    // Tagline — always the last line on the receipt, anchored near the
+    // bottom border so it never collides with the content above it.
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 90, 90);
+    doc.text('"Nothing is more beautiful than honesty."', cx, pageH - margin - 10, { align: 'center' });
+
+    const filenameSafe = (ctx.transaction && ctx.transaction.receiptNo ? ctx.transaction.receiptNo : 'txn') + '-' + todayISO();
+    doc.save(`TPFinance-${isPaidOut ? 'Voucher' : 'Receipt'}-${filenameSafe}.pdf`);
+  }catch(err){
+    toast('Receipt generation failed: ' + err.message, true);
+  }
+}
+
+// Builds a receipt straight from a stored ledger transaction (any past
+// entry), rather than only right after a fresh deposit is submitted.
+// Direction (received vs paid) follows the transaction type.
+function generateReceiptFromTxn(txn){
+  const investor = state.investors.find(i=> String(i.id)===String(txn.investorId));
+  const account = state.accounts.find(a=> String(a.id)===String(txn.accountId));
+  if (!investor){ toast('Investor record not found for this transaction.', true); return; }
+
+  const isPaidOut = (txn.txnType === 'WITHDRAWAL' || txn.txnType === 'FULL_SETTLEMENT');
+
+  generateReceiptPdf({
+    investor,
+    accountNo: account ? account.accountNo : '',
+    amount: Number(txn.amount),
+    date: txn.txnDate,
+    roi: account ? Number(account.roi) : null,
+    transaction: txn,
+    direction: isPaidOut ? 'paid' : 'received'
+  });
+}
+
+// ---------- Loan Agreement PDF ----------
+// First Party / Lender = the selected Investor (from system data).
+// Second Party / Borrower = Rajendra Singh (fixed personal details).
+// Loan Amount / ROI = the account(s) shown in the as-on-date report row.
+const SECOND_PARTY = {
+  name: 'Rajendra Singh',
+  fatherName: 'Shri Than Singh',
+  dob: '05/06/1990',
+  address: 'Luhari, Lohari Iradatnagar, Iradat Nagar, Agra, Uttar Pradesh – 283112'
+};
+
+function generateLoanAgreementPdf(row, asOnDate){
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 46;
+    const contentW = pageW - margin*2;
+    let y = 42;
+
+    // Stamp-paper effect — same green background/border/ink as the Hindi
+    // agreement (--stamp-bg #eaf3e3, --stamp-border #3d6b2c, --stamp-ink
+    // #1f3a17), so both language versions look like they belong to the
+    // same document set.
+    doc.setFillColor(234, 243, 227);
+    doc.rect(0, 0, pageW, pageH, 'F');
+    doc.setDrawColor(61, 107, 44);
+    doc.setLineWidth(2.2);
+    doc.rect(14, 14, pageW - 28, pageH - 28);
+    doc.setLineWidth(0.7);
+    doc.rect(18, 18, pageW - 36, pageH - 36);
+
+    const investor = row.investor;
+    const totalAmount = Math.round(row.totals.runningBalance);
+    const accounts = row.accounts;
+    const LH = 11.5; // tight line height for body text, keeps this to one page
+
+    function heading(text, size){
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(size || 11.5);
+      doc.setTextColor(31,58,23);
+      doc.text(text, pageW/2, y, { align:'center' });
+      y += (size || 11.5) + 6;
+    }
+    function para(text, indent, size){
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(size || 9);
+      doc.setTextColor(31,58,23);
+      const x = margin + (indent || 0);
+      const lines = doc.splitTextToSize(text, contentW - (indent || 0));
+      doc.text(lines, x, y);
+      y += lines.length * LH + 3;
+    }
+    function label(text){
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(31,58,23);
+      doc.text(text, margin, y);
+      y += LH + 2;
+    }
+
+    heading('LOAN AGREEMENT', 15);
+    para(`This Loan Agreement is made and executed as on ${fmtDate(asOnDate)}, based on the investment records maintained as of this date.`);
+    y += 2;
+    heading('BETWEEN', 9.5);
+
+    label('FIRST PARTY / LENDER:');
+    para(`Mr./Ms. ${investor.name}${investor.fatherName ? '   S/o / D/o / W/o ' + investor.fatherName : ''}`);
+    if (investor.address) para(`Resident of ${investor.address}`);
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(7.8);
+    doc.setTextColor(70,95,60);
+    para('(Hereinafter referred to as the "First Party" which expression shall unless repugnant to the context include his/her legal heirs, representatives, successors and assigns.)', 0, 7.8);
+    y += 2;
+
+    heading('AND', 9.5);
+
+    label('SECOND PARTY / BORROWER:');
+    para(`Mr. ${SECOND_PARTY.name}   S/o ${SECOND_PARTY.fatherName}   Date of Birth: ${SECOND_PARTY.dob}`);
+    para(`Resident of ${SECOND_PARTY.address}`);
+    para('(Hereinafter referred to as the "Second Party" which expression shall unless repugnant to the context include his legal heirs, representatives, successors and assigns.)', 0, 7.8);
+    y += 4;
+
+    const totalAmountWords = numberToWordsIndian(totalAmount);
+    const roiSummary = accounts.map(a=> `${Number(a.roi).toFixed(2)}% p.a. on ${fmtMoneyWhole(Number(a.runningBalance))} (A/c ${a.accountNo})`).join('; ');
+
+    label('WHEREAS:');
+    para(`1. The Second Party has approached the First Party for a loan of ${fmtMoneyWhole(totalAmount)} (Rupees ${totalAmountWords} only).`, 8);
+    para(`2. The First Party has agreed to lend the said amount to the Second Party at the following rate(s) of interest per annum, on the terms and conditions set forth in this Agreement: ${roiSummary}.`, 8);
+    para('3. The Second Party acknowledges having received the loan amount from the First Party and undertakes to repay the same to the First Party in accordance with this Agreement.', 8);
+    y += 3;
+
+    label('NOW THIS AGREEMENT WITNESSETH AS FOLLOWS:');
+    para(`1. LOAN AMOUNT: The First Party has advanced a loan of ${fmtMoneyWhole(totalAmount)} (Rupees ${totalAmountWords} only) to the Second Party, as recorded across the account(s) referenced above.`, 8);
+    para('2. RATE OF INTEREST: The loan shall carry interest at the rate(s) stated above, calculated on the actual number of days the funds remain invested.', 8);
+    para('3. REPAYMENT: The Second Party shall repay the principal amount to the First Party, in full or in part, as and when withdrawals are made, until the entire principal amount is repaid.', 8);
+    para('4. JURISDICTION: This Agreement shall be governed by the laws of India and subject to the exclusive jurisdiction of the courts at Agra, Uttar Pradesh.', 8);
+    y += 6;
+
+    para('IN WITNESS WHEREOF, the Parties have hereunto set their hands on the day, month and year first above written.');
+    y += 12;
+
+    const colW = contentW / 2;
+    const leftX = margin;
+    const rightX2 = margin + colW + 10;
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(31,58,23);
+    doc.text('FIRST PARTY / LENDER', leftX, y);
+    doc.text('SECOND PARTY / BORROWER', rightX2, y);
+    y += 16;
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text(`Name: ${investor.name}`, leftX, y);
+    doc.text(`Name: ${SECOND_PARTY.name}`, rightX2, y);
+    y += 15;
+    const leftAddr = doc.splitTextToSize(`Address: ${investor.address || ''}`, colW - 10);
+    const rightAddr = doc.splitTextToSize(`Address: ${SECOND_PARTY.address}`, colW - 10);
+    doc.text(leftAddr, leftX, y);
+    doc.text(rightAddr, rightX2, y);
+    y += Math.max(leftAddr.length, rightAddr.length) * LH + 8;
+    doc.text(`Date: ${fmtDate(asOnDate)}`, leftX, y);
+    doc.text(`Date: ${fmtDate(asOnDate)}`, rightX2, y);
+    y += 22;
+    doc.text('Signature: ______________________', leftX, y);
+    doc.text('Signature: ______________________', rightX2, y);
+
+    doc.save(`Loan-Agreement-${investor.id}-${todayISO()}.pdf`);
+  }catch(err){
+    toast('Agreement generation failed: ' + err.message, true);
+  }
+}
+
+document.getElementById('btnGenerateAgreement').addEventListener('click', ()=>{
+  if (!lastSingleReportRow){ toast('Generate a single-investor report first.', true); return; }
+  if (!lastSingleReportRow.accounts.length){ toast('This investor has no accounts as of this date.', true); return; }
+  generateLoanAgreementPdf(lastSingleReportRow, lastSingleReportAsOnDate);
+});
+
+// ---------- Loan Agreement PDF (Hindi / green stamp-paper style) ----------
+// Devanagari isn't supported by jsPDF's built-in fonts, so this builds
+// the agreement as styled HTML off-screen and rasterizes it with
+// html2canvas directly, embedding the result as an image — same
+// content/structure as the English agreement, translated, on a green
+// stamp-paper background. (We deliberately avoid jsPDF's own doc.html()
+// helper — see the note further down for why.)
+async function generateLoanAgreementPdfHindi(row, asOnDate){
+  const src = document.getElementById('hindiAgreementSource');
+  const overlay = document.getElementById('busyOverlay');
+  try{
+    const investor = row.investor;
+    const totalAmount = Math.round(row.totals.runningBalance);
+    const accounts = row.accounts;
+    const totalAmountWords = numberToWordsIndian(totalAmount);
+    const roiSummary = accounts.map(a=> `${Number(a.roi).toFixed(2)}% प्रति वर्ष, ${fmtMoneyWhole(Number(a.runningBalance))} पर (खाता ${a.accountNo})`).join('; ');
+
+    src.innerHTML = `
+      <h1>ऋण अनुबंध</h1>
+      <p>यह ऋण अनुबंध दिनांक ${fmtDate(asOnDate)} को निष्पादित किया गया है, जो इस तिथि तक अनुरक्षित निवेश अभिलेखों पर आधारित है।</p>
+      <h2>के मध्य</h2>
+      <div class="clause-label">प्रथम पक्ष / ऋणदाता:</div>
+      <p>श्री/श्रीमती ${investor.name}${investor.fatherName ? ' पुत्र/पुत्री/पत्नी श्री ' + investor.fatherName : ''}</p>
+      ${investor.address ? `<p>निवासी ${investor.address}</p>` : ''}
+      <p class="italic-note">(इसके पश्चात "प्रथम पक्ष" के रूप में संदर्भित, जिसमें संदर्भ के प्रतिकूल न होने पर उनके कानूनी उत्तराधिकारी, प्रतिनिधि, उत्तरवर्ती एवं समनुदेशिती सम्मिलित होंगे।)</p>
+      <h2>तथा</h2>
+      <div class="clause-label">द्वितीय पक्ष / ऋणी:</div>
+      <p>श्री ${SECOND_PARTY.name} पुत्र ${SECOND_PARTY.fatherName} — जन्मतिथि: ${SECOND_PARTY.dob}</p>
+      <p>निवासी ${SECOND_PARTY.address}</p>
+      <p class="italic-note">(इसके पश्चात "द्वितीय पक्ष" के रूप में संदर्भित, जिसमें संदर्भ के प्रतिकूल न होने पर उनके कानूनी उत्तराधिकारी, प्रतिनिधि, उत्तरवर्ती एवं समनुदेशिती सम्मिलित होंगे।)</p>
+
+      <div class="clause-label">जबकि:</div>
+      <p>1. द्वितीय पक्ष ने प्रथम पक्ष से ${fmtMoneyWhole(totalAmount)} (रुपये ${totalAmountWords} मात्र) का ऋण लेने हेतु संपर्क किया है।</p>
+      <p>2. प्रथम पक्ष इस अनुबंध में उल्लिखित नियमों एवं शर्तों के अधीन, निम्नलिखित ब्याज दर(दरों) पर उक्त राशि द्वितीय पक्ष को उधार देने हेतु सहमत हुआ है: ${roiSummary}।</p>
+      <p>3. द्वितीय पक्ष प्रथम पक्ष से ऋण राशि प्राप्त होने की पुष्टि करता है तथा इस अनुबंध के अनुसार उक्त राशि प्रथम पक्ष को चुकाने का वचन देता है।</p>
+
+      <div class="clause-label">अतः यह अनुबंध निम्नलिखित रूप से साक्ष्यांकित करता है:</div>
+      <p>1. ऋण राशि: प्रथम पक्ष ने द्वितीय पक्ष को ${fmtMoneyWhole(totalAmount)} (रुपये ${totalAmountWords} मात्र) का ऋण प्रदान किया है, जो उपरोक्त संदर्भित खाते(खातों) में अभिलिखित है।</p>
+      <p>2. ब्याज दर: ऋण पर उपरोक्त उल्लिखित दर(दरों) पर ब्याज लगेगा, जिसकी गणना निधि निवेशित रहने की वास्तविक दिनों की संख्या पर की जाएगी।</p>
+      <p>3. पुनर्भुगतान: द्वितीय पक्ष मूलधन राशि प्रथम पक्ष को पूर्ण अथवा आंशिक रूप में — जैसे-जैसे निकासी की जाती है — तब तक चुकाएगा जब तक संपूर्ण मूलधन राशि चुकता नहीं हो जाती।</p>
+      <p>4. क्षेत्राधिकार: यह अनुबंध भारत के कानूनों द्वारा शासित होगा तथा आगरा, उत्तर प्रदेश के न्यायालयों के अनन्य क्षेत्राधिकार के अधीन होगा।</p>
+
+      <p>इसके साक्ष्य में, पक्षकारों ने प्रथम लिखित दिनांक, माह एवं वर्ष को अपने हस्ताक्षर किए हैं।</p>
+
+      <div class="sign-grid">
+        <div class="sign-col">
+          <div class="role">प्रथम पक्ष / ऋणदाता</div>
+          <div>नाम: ${investor.name}</div>
+          <div>पता: ${investor.address || ''}</div>
+          <div>दिनांक: ${fmtDate(asOnDate)}</div>
+          <div>हस्ताक्षर: ______________________</div>
+        </div>
+        <div class="sign-col">
+          <div class="role">द्वितीय पक्ष / ऋणी</div>
+          <div>नाम: ${SECOND_PARTY.name}</div>
+          <div>पता: ${SECOND_PARTY.address}</div>
+          <div>दिनांक: ${fmtDate(asOnDate)}</div>
+          <div>हस्ताक्षर: ______________________</div>
+        </div>
+      </div>
+
+      <p class="italic-note" style="margin-top:22px;text-align:center;">यह हिंदी प्रति मूल अंग्रेज़ी अनुबंध का अनुवाद है; किसी भी विवाद की स्थिति में अंग्रेज़ी प्रति मान्य होगी।</p>
+    `;
+
+    // Show it in-viewport (hidden behind an opaque overlay) so
+    // html2canvas captures fully rendered, correctly-fonted content —
+    // off-screen negative offsets are unreliable for this.
+    overlay.classList.add('opaque');
+    setBusy(true, 'हिंदी अनुबंध तैयार हो रहा है… / Generating Hindi agreement…');
+    src.style.display = 'block';
+
+    // Make sure the Devanagari webfont has actually finished
+    // downloading before we rasterize — otherwise the text can be
+    // painted blank/invisible while the font swaps in.
+    if (document.fonts && document.fonts.ready){
+      await Promise.all([
+        document.fonts.load('400 13px "Noto Sans Devanagari"'),
+        document.fonts.load('700 20px "Noto Sans Devanagari"')
+      ]);
+      await document.fonts.ready;
+    }
+    // One extra frame so layout/paint settles after the font swap.
+    await new Promise(r=> requestAnimationFrame(()=> requestAnimationFrame(r)));
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
+    // IMPORTANT: we deliberately do NOT use jsPDF's doc.html() helper
+    // here. That helper tries to also lay down its own vector PDF text
+    // using jsPDF's built-in Latin-only fonts, which have no Devanagari
+    // glyphs — the result is garbled/wrong characters even though the
+    // on-screen source looks correct. Calling html2canvas ourselves and
+    // embedding the result as a plain image sidesteps that entirely:
+    // whatever the browser actually rendered (real Devanagari glyphs)
+    // is exactly what ends up in the PDF, just as a picture rather than
+    // selectable text.
+    const canvas = await html2canvas(src, {
+      scale: 2,
+      backgroundColor: '#eaf3e3',
+      useCORS: true
+    });
+
+    const marginPt = 20;
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const imgWidthPt = pageW - marginPt * 2;
+    const imgHeightPt = (canvas.height * imgWidthPt) / canvas.width;
+    const usablePageHeightPt = pageH - marginPt * 2;
+    const imgData = canvas.toDataURL('image/png');
+
+    let heightLeft = imgHeightPt;
+    let y = marginPt;
+    doc.addImage(imgData, 'PNG', marginPt, y, imgWidthPt, imgHeightPt);
+    heightLeft -= usablePageHeightPt;
+
+    while (heightLeft > 0){
+      doc.addPage();
+      y = marginPt - (imgHeightPt - heightLeft);
+      doc.addImage(imgData, 'PNG', marginPt, y, imgWidthPt, imgHeightPt);
+      heightLeft -= usablePageHeightPt;
+    }
+
+    doc.save(`Loan-Agreement-Hindi-${investor.id}-${todayISO()}.pdf`);
+  }catch(err){
+    toast('Hindi agreement generation failed: ' + err.message, true);
+  }finally{
+    src.style.display = 'none';
+    src.innerHTML = '';
+    overlay.classList.remove('opaque');
+    setBusy(false);
+  }
+}
+
+document.getElementById('btnGenerateAgreementHindi').addEventListener('click', ()=>{
+  if (!lastSingleReportRow){ toast('Generate a single-investor report first.', true); return; }
+  if (!lastSingleReportRow.accounts.length){ toast('This investor has no accounts as of this date.', true); return; }
+  generateLoanAgreementPdfHindi(lastSingleReportRow, lastSingleReportAsOnDate);
+});
+
+// ---- PDF export (jsPDF + autotable) ----
+document.getElementById('btnExportPdf').addEventListener('click', ()=>{
+  if (!lastReportData){ toast('Generate a report first.', true); return; }
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const asOnLabel = fmtDate(lastReportData.asOnDate);
+    let y = 40;
+
+    doc.setFontSize(16);
+    doc.text('T.P. Finance — MIS Report', 40, y);
+    y += 18;
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`As on ${asOnLabel}`, 40, y);
+    y += 20;
+    doc.setTextColor(20);
+
+    lastReportData.report.forEach(row=>{
+      if (y > 720){ doc.addPage(); y = 40; }
+      doc.setFontSize(12);
+      doc.text(`${row.investor.name}  (${row.investor.id})`, 40, y);
+      y += 8;
+
+      const body = row.accounts.map(a=> [
+        a.accountNo, fmtDate(a.openingDate), fmtMoney(Number(a.openingAmount)),
+        Number(a.roi).toFixed(2) + '%', fmtMoney(a.runningBalance),
+        fmtMoney(a.accruedInterest), fmtMoney(a.currentValue), a.statusAsOf
+      ]);
+      body.push(['TOTAL','','','', fmtMoney(row.totals.runningBalance), fmtMoney(row.totals.accruedInterest), fmtMoney(row.totals.currentValue), '']);
+
+      doc.autoTable({
+        startY: y + 6,
+        head: [['Account','Opened','Opening Amt','ROI','Running Bal.','Accrued Int.','Current Value','Status']],
+        body: body,
+        styles: { fontSize: 8, cellPadding: 4 },
+        headStyles: { fillColor: [15, 184, 148] },
+        margin: { left: 40, right: 40 },
+        didDrawPage: (data)=> { y = data.cursor.y; }
+      });
+      y = doc.lastAutoTable.finalY + 22;
+    });
+
+    if (lastReportData.report.length > 1){
+      if (y > 700){ doc.addPage(); y = 40; }
+      doc.setFontSize(11);
+      doc.text('Grand Total (All Investors)', 40, y);
+      doc.autoTable({
+        startY: y + 8,
+        head: [['Running Balance','Accrued Interest','Current Value']],
+        body: [[
+          fmtMoney(lastReportData.grandTotals.runningBalance),
+          fmtMoney(lastReportData.grandTotals.accruedInterest),
+          fmtMoney(lastReportData.grandTotals.currentValue)
+        ]],
+        styles: { fontSize: 9, cellPadding: 5 },
+        headStyles: { fillColor: [15, 184, 148] },
+        margin: { left: 40, right: 40 }
+      });
+    }
+
+    const filenameBase = lastReportData.report.length === 1
+      ? lastReportData.report[0].investor.id
+      : 'combined';
+    doc.save(`ledger-report-${filenameBase}-${todayISO()}.pdf`);
+  }catch(err){
+    toast('PDF export failed: ' + err.message, true);
+  }
+});
+
+// ---- Excel export (SheetJS) ----
+document.getElementById('btnExportExcel').addEventListener('click', ()=>{
+  if (!lastReportData){ toast('Generate a report first.', true); return; }
+  try{
+    const wb = XLSX.utils.book_new();
+
+    lastReportData.report.forEach(row=>{
+      const sheetRows = row.accounts.map(a=> ({
+        'Account No.': a.accountNo,
+        'Opened': fmtDate(a.openingDate),
+        'Opening Amount': Number(a.openingAmount),
+        'ROI (%)': Number(a.roi),
+        'Running Balance': Number(a.runningBalance.toFixed(2)),
+        'Accrued Interest': Number(a.accruedInterest.toFixed(2)),
+        'Current Value': Number(a.currentValue.toFixed(2)),
+        'Status': a.statusAsOf
+      }));
+      sheetRows.push({
+        'Account No.': 'TOTAL', 'Opened':'', 'Opening Amount':'', 'ROI (%)':'',
+        'Running Balance': Number(row.totals.runningBalance.toFixed(2)),
+        'Accrued Interest': Number(row.totals.accruedInterest.toFixed(2)),
+        'Current Value': Number(row.totals.currentValue.toFixed(2)),
+        'Status': ''
+      });
+      const ws = XLSX.utils.json_to_sheet(sheetRows);
+      // Sheet names max 31 chars, no special chars
+      let sheetName = `${row.investor.id} ${row.investor.name}`.replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName || row.investor.id);
+    });
+
+    if (lastReportData.report.length > 1){
+      const summaryRows = lastReportData.report.map(row=> ({
+        'Investor ID': row.investor.id,
+        'Investor Name': row.investor.name,
+        'Accounts': row.accounts.length,
+        'Running Balance': Number(row.totals.runningBalance.toFixed(2)),
+        'Accrued Interest': Number(row.totals.accruedInterest.toFixed(2)),
+        'Current Value': Number(row.totals.currentValue.toFixed(2))
+      }));
+      summaryRows.push({
+        'Investor ID': '', 'Investor Name': 'GRAND TOTAL', 'Accounts': '',
+        'Running Balance': Number(lastReportData.grandTotals.runningBalance.toFixed(2)),
+        'Accrued Interest': Number(lastReportData.grandTotals.accruedInterest.toFixed(2)),
+        'Current Value': Number(lastReportData.grandTotals.currentValue.toFixed(2))
+      });
+      const summaryWs = XLSX.utils.json_to_sheet(summaryRows);
+      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+      // Move summary sheet to the front
+      wb.SheetNames.unshift(wb.SheetNames.pop());
+    }
+
+    const filenameBase = lastReportData.report.length === 1
+      ? lastReportData.report[0].investor.id
+      : 'combined';
+    XLSX.writeFile(wb, `ledger-report-${filenameBase}-${todayISO()}.xlsx`);
+  }catch(err){
+    toast('Excel export failed: ' + err.message, true);
+  }
+});
+
+// ---------- Navigation ----------
+
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=> s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('nav.tabs button').forEach(b=> b.classList.toggle('active', b.dataset.screen===name));
+}
+
+function showSubScreen(name){
+  document.querySelectorAll('.subscreen').forEach(s=> s.classList.remove('active'));
+  const target = document.getElementById('sub-' + name);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('nav.subtabs button').forEach(b=> b.classList.toggle('active', b.dataset.subscreen===name));
+}
+
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  if (e.target.tagName === 'BUTTON'){
+    showScreen(e.target.dataset.screen);
+  }
+});
+
+document.getElementById('investorSubtabs').addEventListener('click', (e)=>{
+  if (e.target.tagName === 'BUTTON'){
+    showSubScreen(e.target.dataset.subscreen);
+  }
+});
+
+document.querySelectorAll('[data-goto]').forEach(el=>{
+  el.addEventListener('click', (e)=>{
+    e.preventDefault();
+    showScreen(el.dataset.goto);
+    if (el.dataset.subgoto) showSubScreen(el.dataset.subgoto);
+  });
+});
+
+document.querySelectorAll('[data-subgoto]:not([data-goto])').forEach(el=>{
+  el.addEventListener('click', (e)=>{
+    e.preventDefault();
+    showScreen('investors');
+    showSubScreen(el.dataset.subgoto);
+  });
+});
+
+// ---------- PWA: service worker registration + forced update ----------
+// New code is precached in the background as soon as it's deployed.
+// Unlike a dismissible banner, this BLOCKS the app until the person
+// taps "Update Now" — they can't keep using a stale, out-of-sync
+// version against a live shared database.
+
+let waitingWorker = null;
+
+function showUpdateBanner(worker){
+  waitingWorker = worker;
+  document.getElementById('updateBanner').classList.add('show');
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').then((reg) => {
+      // Case 1: an update finished installing while this tab was open.
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner(newWorker);
+          }
+        });
+      });
+      // Case 2: an update was already installed (e.g. from an earlier
+      // visit) and is just waiting for confirmation.
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        showUpdateBanner(reg.waiting);
+      }
+      // Check immediately on open (don't wait for the browser's own
+      // ~24h heuristic), then keep checking while the app stays open.
+      reg.update();
+      setInterval(() => reg.update(), 60 * 60 * 1000);
+    }).catch((err) => {
+      console.warn('Service worker registration failed:', err);
+    });
+
+    // Once the new worker takes control, reload so the new files apply.
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  });
+}
+
+document.getElementById('btnApplyUpdate').addEventListener('click', () => {
+  if (waitingWorker) waitingWorker.postMessage('SKIP_WAITING');
+  // Deliberately no classList.remove('show') here — the overlay stays
+  // up (with the button now inert) until controllerchange reloads the
+  // page onto the new version. There is no way to dismiss this screen
+  // without updating.
+});
+
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  setInstallButtonVisibility(true);
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  setInstallButtonVisibility(false);
+});
+
+document.getElementById('btnInstallApp').addEventListener('click', async () => {
+  if (!deferredInstallPrompt) {
+    toast('Install option is not available right now.');
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  try {
+    const choice = await deferredInstallPrompt.userChoice;
+    if (choice && choice.outcome === 'accepted') {
+      toast('FinSphere installation started.');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  deferredInstallPrompt = null;
+  setInstallButtonVisibility(false);
+});
+
+// ---------- Google Sign-In (identity display only — no access control yet) ----------
+// Entirely optional. The app is fully usable without ever signing in —
+// "Continue as Guest" just dismisses the prompt for this device so it
+// stops asking, without signing anyone in.
+
+function decodeJwtPayload(token){
+  try{
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(atob(base64).split('').map(c =>
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    return JSON.parse(json);
+  }catch(e){ return null; }
+}
+
+function showUserGreeting(name, picture){
+  const el = document.getElementById('userGreeting');
+  const initial = (name || '?').trim().charAt(0).toUpperCase();
+  el.innerHTML = `<span class="avatar">${initial}</span><span class="hi">Hi</span>${name}`;
+  el.classList.remove('hidden');
+  hideLoginModal();
+}
+
+function hideLoginModal(){
+  document.getElementById('loginModalOverlay').classList.remove('show');
+}
+function showLoginModal(){
+  document.getElementById('loginModalOverlay').classList.add('show');
+}
+
+function handleGoogleCredential(response){
+  const payload = decodeJwtPayload(response.credential);
+  if (!payload) return;
+  const name = payload.given_name || payload.name || payload.email;
+  localStorage.setItem('fs_user_name', name);
+  localStorage.setItem('fs_user_email', payload.email || '');
+  showUserGreeting(name);
+}
+
+function signOutGoogle(){
+  localStorage.removeItem('fs_user_name');
+  localStorage.removeItem('fs_user_email');
+  localStorage.removeItem('fs_guest_dismissed');
+  document.getElementById('userGreeting').classList.add('hidden');
+  if (typeof google !== 'undefined' && google.accounts && google.accounts.id){
+    google.accounts.id.disableAutoSelect();
+  }
+  // Signing out re-opens the choice — sign in again, or continue as guest.
+  showLoginModal();
+}
+
+document.getElementById('userGreeting').addEventListener('click', signOutGoogle);
+
+document.getElementById('btnGuest').addEventListener('click', () => {
+  // Just dismisses the popup on this device — doesn't sign anyone in or
+  // out, doesn't touch app access, purely stops the nagging.
+  localStorage.setItem('fs_guest_dismissed', '1');
+  hideLoginModal();
+  if (typeof google !== 'undefined' && google.accounts && google.accounts.id){
+    google.accounts.id.cancel();
+  }
+});
+
+function initGoogleSignIn(){
+  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'PASTE_YOUR_GOOGLE_OAUTH_CLIENT_ID_HERE.apps.googleusercontent.com'){
+    return; // sign-in not configured — app works fully without it, modal never appears
+  }
+  // Optimistically show the last known name immediately so there's no
+  // flash of the popup while Google's script loads in the background.
+  const cachedName = localStorage.getItem('fs_user_name');
+  if (cachedName) showUserGreeting(cachedName);
+
+  const guestDismissed = localStorage.getItem('fs_guest_dismissed') === '1';
+  if (cachedName || guestDismissed) return; // signed in, or chose Guest — leave them alone
+
+  if (typeof google === 'undefined' || !google.accounts || !google.accounts.id){
+    setTimeout(initGoogleSignIn, 400);
+    return;
+  }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleGoogleCredential,
+    auto_select: true
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('googleSignInButton'),
+    { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' }
+  );
+  showLoginModal();
+  google.accounts.id.prompt(); // also tries silent one-tap sign-in alongside the modal
+}
+
+// ---------- Init ----------
+
+document.getElementById('invDate').value = todayISO();
+document.getElementById('wdDate').value = todayISO();
+document.getElementById('repAsOnDate').value = todayISO();
+
+(async function init(){
+  updateVersionLabels();
+  setInstallButtonVisibility(false);
+  initGoogleSignIn();
+  await connectWithRetry();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+
+  // Light auto-refresh so a second device's changes show up without manual reload
+  setInterval(()=>{ if (state.scriptUrl) refreshAll(); }, 30000);
+})();
+</script>
+</body>
+</html>
