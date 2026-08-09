@@ -1450,7 +1450,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'V21';
+const APP_VERSION = 'V22';
 
 function safeConnectionHost(){
   try { return state.scriptUrl ? new URL(state.scriptUrl).hostname : 'not configured'; }
@@ -1697,9 +1697,67 @@ function setSyncStatus(ok, label){
   document.getElementById('btnConnect').classList.toggle('hidden', ok);
 }
 
+function normalizeDatabaseData(data){
+  // Supabase/Postgres returns column names in snake_case, while the
+  // frontend uses the original Apps Script camelCase field names.
+  // Normalize once at the API boundary so every renderer sees one shape.
+  const mapInvestor = (i={}) => ({
+    ...i,
+    fatherName: i.fatherName ?? i.father_name ?? '',
+    createdAt: i.createdAt ?? i.created_at ?? ''
+  });
+  const mapAccount = (a={}) => ({
+    ...a,
+    accountNo: a.accountNo ?? a.account_no ?? '',
+    investorId: a.investorId ?? a.investor_id ?? '',
+    openingDate: a.openingDate ?? a.opening_date ?? '',
+    openingAmount: a.openingAmount ?? a.opening_amount ?? 0,
+    lastEventDate: a.lastEventDate ?? a.last_event_date ?? null,
+    daysSinceLastEvent: a.daysSinceLastEvent ?? a.days_since_last_event ?? 0,
+    runningBalance: a.runningBalance ?? a.running_balance ?? 0,
+    accruedInterest: a.accruedInterest ?? a.accrued_interest ?? 0,
+    currentValue: a.currentValue ?? a.current_value ?? 0,
+    createdAt: a.createdAt ?? a.created_at ?? ''
+  });
+  const mapTransaction = (t={}) => ({
+    ...t,
+    accountId: t.accountId ?? t.account_id ?? '',
+    investorId: t.investorId ?? t.investor_id ?? '',
+    txnDate: t.txnDate ?? t.txn_date ?? '',
+    txnType: t.txnType ?? t.txn_type ?? '',
+    balanceBefore: t.balanceBefore ?? t.balance_before ?? 0,
+    interestAdded: t.interestAdded ?? t.interest_added ?? 0,
+    balanceAfter: t.balanceAfter ?? t.balance_after ?? 0,
+    receiptNo: t.receiptNo ?? t.receipt_no ?? '',
+    paymentMode: t.paymentMode ?? t.payment_mode ?? '',
+    chequeNo: t.chequeNo ?? t.cheque_no ?? '',
+    chequeDate: t.chequeDate ?? t.cheque_date ?? '',
+    drawnOnBank: t.drawnOnBank ?? t.drawn_on_bank ?? '',
+    txnRefNo: t.txnRefNo ?? t.txn_ref_no ?? '',
+    narration: t.narration ?? t.narration ?? '',
+    creditAccountNo: t.creditAccountNo ?? t.credit_account_no ?? '',
+    creditAccountName: t.creditAccountName ?? t.credit_account_name ?? '',
+    createdAt: t.createdAt ?? t.created_at ?? ''
+  });
+  const mapBorrower = (b={}) => ({
+    ...b,
+    fatherName: b.fatherName ?? b.father_name ?? '',
+    createdAt: b.createdAt ?? b.created_at ?? ''
+  });
+  return {
+    ...data,
+    asOnDate: data.asOnDate ?? data.as_on_date ?? null,
+    investors: Array.isArray(data.investors) ? data.investors.map(mapInvestor) : [],
+    accounts: Array.isArray(data.accounts) ? data.accounts.map(mapAccount) : [],
+    transactions: Array.isArray(data.transactions) ? data.transactions.map(mapTransaction) : [],
+    borrowers: Array.isArray(data.borrowers) ? data.borrowers.map(mapBorrower) : []
+  };
+}
+
 async function refreshAll(showLoading){
   try{
-    const data = await apiGet('getAll');
+    const rawData = await apiGet('getAll');
+    const data = normalizeDatabaseData(rawData || {});
     state.investors = data.investors || [];
     state.accounts = data.accounts || [];
     state.transactions = data.transactions || [];
