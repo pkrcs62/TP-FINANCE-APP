@@ -76,12 +76,69 @@ create table borrowers (
   email text default '',
   photo text default '',
   remarks text default '',
-  loan_amount numeric not null default 0,
-  loan_date date default current_date,
+  loan_amount numeric not null default 0,   -- legacy single-figure field, kept for old data; superseded by loan_accounts
+  loan_date date default current_date,      -- legacy, see above
   "references" jsonb not null default '[]'::jsonb,   -- array of guarantor profiles
   status text not null default 'ACTIVE',
   created_at timestamptz not null default now()
 );
+
+-- ---------- Loan Module ----------
+-- Mirrors the investor accounts/transactions pattern, but for money the
+-- business has LENT OUT to a borrower rather than money invested with it.
+-- A borrower can have several loan_accounts open at once, each independently
+-- BULLET (interest accrues daily on outstanding principal, repay any time,
+-- partial or full — same math as the investor side) or EMI (fixed tenure,
+-- reducing-balance amortization, equal monthly installment computed from
+-- principal/roi/tenure).
+create table loan_accounts (
+  id uuid primary key default gen_random_uuid(),
+  loan_no text not null,                -- e.g. 'BRW01-L001'
+  borrower_id text not null references borrowers(id),
+  account_type text not null,           -- BULLET | EMI
+  principal numeric not null,
+  roi numeric not null,                 -- annual interest rate, percent
+  disbursement_date date not null,
+  tenure_months integer,                -- EMI only
+  emi_amount numeric,                   -- EMI only, computed at creation
+  status text not null default 'ACTIVE', -- ACTIVE | CLOSED | OVERDUE
+  created_at timestamptz not null default now()
+);
+
+create table loan_transactions (
+  id uuid primary key default gen_random_uuid(),
+  loan_account_id uuid not null references loan_accounts(id),
+  borrower_id text not null references borrowers(id),
+  txn_date date not null,
+  txn_type text not null,             -- DISBURSEMENT | REPAYMENT | FULL_SETTLEMENT
+  amount numeric not null,
+  balance_before numeric not null default 0,
+  interest_added numeric not null default 0,
+  balance_after numeric not null default 0,
+  remarks text default '',
+  receipt_no text default '',
+  payment_mode text default '',
+  created_at timestamptz not null default now()
+);
+
+-- One row per scheduled installment for an EMI loan account, generated once
+-- at loan creation so the schedule can be shown/printed immediately and each
+-- installment can later be marked paid against an actual loan_transactions
+-- repayment. Not used for BULLET accounts.
+create table loan_emi_schedule (
+  id uuid primary key default gen_random_uuid(),
+  loan_account_id uuid not null references loan_accounts(id),
+  installment_no integer not null,
+  due_date date not null,             -- informational only; EMI due dates are flexible per Prashant, not enforced
+  emi_amount numeric not null,
+  principal_component numeric not null,
+  interest_component numeric not null,
+  closing_balance numeric not null,
+  status text not null default 'PENDING',  -- PENDING | PAID | OVERDUE
+  paid_txn_id uuid references loan_transactions(id),
+  created_at timestamptz not null default now()
+);
+
 
 create table audit_log (
   id uuid primary key default gen_random_uuid(),
@@ -588,6 +645,264 @@ begin
 end;
 $$;
 
+-- ---------- Loan Module: EMI amortization ----------
+-- Standard reducing-balance EMI: EMI = P * r * (1+r)^n / ((1+r)^n - 1),
+-- where r is the MONTHLY rate (annual roi / 12 / 100) and n is tenure in
+-- months. Falls back to a simple principal/n split if roi is zero.
+create or replace function calc_emi_amount(p_principal numeric, p_roi_annual numeric, p_tenure_months integer)
+returns numeric language plpgsql immutable as $$
+declare
+  r numeric;
+  emi numeric;
+begin
+  if p_tenure_months is null or p_tenure_months <= 0 then
+    raise exception 'Tenure must be a positive number of months';
+  end if;
+  if p_roi_annual is null or p_roi_annual = 0 then
+    return round(p_principal / p_tenure_months, 2);
+  end if;
+  r := (p_roi_annual / 12.0) / 100.0;
+  emi := p_principal * r * power(1 + r, p_tenure_months) / (power(1 + r, p_tenure_months) - 1);
+  return round(emi, 2);
+end;
+$$;
+
+-- Builds the full month-by-month amortization schedule for an EMI loan and
+-- inserts it into loan_emi_schedule. Called once, right after the loan
+-- account is created, so the schedule can be shown/printed immediately.
+create or replace function generate_emi_schedule(p_loan_account_id uuid)
+returns void language plpgsql as $$
+declare
+  la loan_accounts%rowtype;
+  r numeric;
+  balance numeric;
+  interest_part numeric;
+  principal_part numeric;
+  i integer;
+begin
+  select * into la from loan_accounts where id = p_loan_account_id;
+  if not found then raise exception 'Loan account not found'; end if;
+  if la.account_type <> 'EMI' then raise exception 'Schedule only applies to EMI loans'; end if;
+
+  delete from loan_emi_schedule where loan_account_id = p_loan_account_id;
+
+  r := (la.roi / 12.0) / 100.0;
+  balance := la.principal;
+
+  for i in 1..la.tenure_months loop
+    interest_part := round(balance * r, 2);
+    principal_part := round(la.emi_amount - interest_part, 2);
+    -- Last installment absorbs any rounding remainder so the schedule
+    -- closes exactly to zero.
+    if i = la.tenure_months then
+      principal_part := balance;
+    end if;
+    balance := round(balance - principal_part, 2);
+
+    insert into loan_emi_schedule (loan_account_id, installment_no, due_date, emi_amount,
+      principal_component, interest_component, closing_balance, status)
+    values (p_loan_account_id, i, (la.disbursement_date + (i || ' months')::interval)::date,
+      case when i = la.tenure_months then principal_part + interest_part else la.emi_amount end,
+      principal_part, interest_part, greatest(balance, 0), 'PENDING');
+  end loop;
+end;
+$$;
+
+-- ---------- Loan Module: account operations ----------
+
+create or replace function add_loan_account(p jsonb)
+returns jsonb language plpgsql as $$
+declare
+  v_borrower borrowers%rowtype;
+  v_loan loan_accounts%rowtype;
+  v_txn loan_transactions%rowtype;
+  v_seq integer;
+  v_loan_no text;
+  v_account_type text;
+  v_principal numeric;
+  v_roi numeric;
+  v_tenure integer;
+  v_emi numeric;
+  v_receipt text;
+begin
+  select * into v_borrower from borrowers where id = p->>'borrowerId';
+  if not found then return jsonb_build_object('error', 'Borrower not found'); end if;
+
+  v_account_type := upper(coalesce(p->>'accountType', ''));
+  if v_account_type not in ('BULLET', 'EMI') then
+    return jsonb_build_object('error', 'Account type must be BULLET or EMI');
+  end if;
+
+  v_principal := (p->>'principal')::numeric;
+  v_roi := (p->>'roi')::numeric;
+  if v_principal is null or v_principal <= 0 then
+    return jsonb_build_object('error', 'Principal must be greater than zero');
+  end if;
+
+  v_emi := null;
+  v_tenure := null;
+  if v_account_type = 'EMI' then
+    v_tenure := (p->>'tenureMonths')::integer;
+    if v_tenure is null or v_tenure <= 0 then
+      return jsonb_build_object('error', 'Tenure (months) is required for an EMI loan');
+    end if;
+    v_emi := calc_emi_amount(v_principal, v_roi, v_tenure);
+  end if;
+
+  select count(*) into v_seq from loan_accounts where borrower_id = p->>'borrowerId';
+  v_loan_no := (p->>'borrowerId') || '-L' || lpad((v_seq + 1)::text, 3, '0');
+
+  insert into loan_accounts (loan_no, borrower_id, account_type, principal, roi,
+    disbursement_date, tenure_months, emi_amount, status)
+  values (v_loan_no, p->>'borrowerId', v_account_type, v_principal, v_roi,
+    (p->>'disbursementDate')::date, v_tenure, v_emi, 'ACTIVE')
+  returning * into v_loan;
+
+  if v_account_type = 'EMI' then
+    perform generate_emi_schedule(v_loan.id);
+  end if;
+
+  v_receipt := next_receipt_no();
+  insert into loan_transactions (loan_account_id, borrower_id, txn_date, txn_type, amount,
+    balance_before, interest_added, balance_after, remarks, receipt_no, payment_mode)
+  values (v_loan.id, p->>'borrowerId', (p->>'disbursementDate')::date, 'DISBURSEMENT', v_principal,
+    0, 0, v_principal, coalesce(p->>'remarks',''), v_receipt, coalesce(p->>'paymentMode',''))
+  returning * into v_txn;
+
+  perform log_audit('CREATE', 'LoanAccount', v_loan.id::text, to_jsonb(v_loan));
+  return jsonb_build_object('ok', true, 'loanAccount', to_jsonb(v_loan), 'transaction', to_jsonb(v_txn));
+end;
+$$;
+
+-- Live outstanding balance for a BULLET loan account: same math as
+-- compute_account_value, just borrower-owed instead of investor-owed.
+create or replace function compute_loan_value(p_loan_account_id uuid, p_as_on date default current_date)
+returns table(running_balance numeric, last_event_date date, days_since_last_event integer,
+              accrued_interest numeric, current_value numeric)
+language plpgsql as $$
+declare
+  la loan_accounts%rowtype;
+  last_txn loan_transactions%rowtype;
+  v_balance numeric := 0;
+  v_last_date date;
+  v_days integer;
+  v_interest numeric;
+begin
+  select * into la from loan_accounts where id = p_loan_account_id;
+  if not found then raise exception 'Loan account not found'; end if;
+
+  select * into last_txn from loan_transactions
+    where loan_account_id = p_loan_account_id
+    order by txn_date desc, created_at desc
+    limit 1;
+
+  if found then
+    v_balance := last_txn.balance_after;
+    v_last_date := last_txn.txn_date;
+  else
+    v_balance := la.principal;
+    v_last_date := la.disbursement_date;
+  end if;
+
+  v_days := days_between(v_last_date, p_as_on);
+  v_interest := case when la.account_type = 'BULLET' then calc_interest(v_balance, la.roi, v_days) else 0 end;
+
+  return query select v_balance, v_last_date, v_days, v_interest, (v_balance + v_interest);
+end;
+$$;
+
+-- Records a repayment against a loan account (BULLET or EMI). For EMI loans,
+-- also marks the oldest PENDING/OVERDUE schedule row(s) as PAID up to the
+-- amount received.
+create or replace function repay_loan(p jsonb)
+returns jsonb language plpgsql as $$
+declare
+  la loan_accounts%rowtype;
+  v_val record;
+  v_amount numeric;
+  v_balance_after numeric;
+  v_is_full boolean;
+  v_txn loan_transactions%rowtype;
+  v_receipt text;
+  v_remaining numeric;
+  sched loan_emi_schedule%rowtype;
+begin
+  select * into la from loan_accounts where id = (p->>'loanAccountId')::uuid;
+  if not found then return jsonb_build_object('error', 'Loan account not found'); end if;
+  if la.status = 'CLOSED' then return jsonb_build_object('error', 'Loan account is already closed'); end if;
+
+  select * into v_val from compute_loan_value(la.id, (p->>'date')::date);
+
+  v_amount := (p->>'amount')::numeric;
+  if v_amount <= 0 then return jsonb_build_object('error', 'Repayment amount must be greater than zero'); end if;
+  if v_amount > v_val.current_value + 0.01 then
+    return jsonb_build_object('error', 'Repayment amount exceeds outstanding balance (Rs. ' || round(v_val.current_value,2)::text || ')');
+  end if;
+
+  v_balance_after := v_val.current_value - v_amount;
+  v_is_full := coalesce((p->>'fullSettlement')::boolean, false) or v_balance_after < 0.01;
+  v_receipt := next_receipt_no();
+
+  insert into loan_transactions (loan_account_id, borrower_id, txn_date, txn_type, amount,
+    balance_before, interest_added, balance_after, remarks, receipt_no, payment_mode)
+  values (la.id, la.borrower_id, (p->>'date')::date,
+    case when v_is_full then 'FULL_SETTLEMENT' else 'REPAYMENT' end,
+    v_amount, v_val.running_balance, v_val.accrued_interest,
+    case when v_is_full then 0 else v_balance_after end, coalesce(p->>'remarks',''),
+    v_receipt, coalesce(p->>'paymentMode',''))
+  returning * into v_txn;
+
+  if la.account_type = 'EMI' then
+    v_remaining := v_amount;
+    for sched in
+      select * from loan_emi_schedule
+      where loan_account_id = la.id and status in ('PENDING', 'OVERDUE')
+      order by installment_no asc
+    loop
+      exit when v_remaining < sched.emi_amount - 0.01;
+      update loan_emi_schedule set status = 'PAID', paid_txn_id = v_txn.id where id = sched.id;
+      v_remaining := v_remaining - sched.emi_amount;
+    end loop;
+  end if;
+
+  if v_is_full then
+    update loan_accounts set status = 'CLOSED' where id = la.id;
+  end if;
+
+  perform log_audit(case when v_is_full then 'FULL_SETTLEMENT' else 'REPAYMENT' end,
+    'LoanAccount', la.id::text, to_jsonb(v_txn));
+
+  return jsonb_build_object('ok', true, 'transaction', to_jsonb(v_txn), 'loanClosed', v_is_full);
+end;
+$$;
+
+-- Flags EMI installments whose due_date has passed with no payment as
+-- OVERDUE, and reflects that on the parent loan account. Call this once
+-- when the app loads (cheap: only touches rows that need it) rather than on
+-- every read, since it performs writes.
+create or replace function refresh_overdue_status()
+returns void language plpgsql as $$
+begin
+  update loan_emi_schedule set status = 'OVERDUE'
+    where status = 'PENDING' and due_date < current_date;
+
+  update loan_accounts la set status = 'OVERDUE'
+    where la.status = 'ACTIVE'
+    and exists (select 1 from loan_emi_schedule s where s.loan_account_id = la.id and s.status = 'OVERDUE');
+end;
+$$;
+
+create or replace function delete_loan_account(p jsonb)
+returns jsonb language plpgsql as $$
+begin
+  delete from loan_emi_schedule where loan_account_id = (p->>'loanAccountId')::uuid;
+  delete from loan_transactions where loan_account_id = (p->>'loanAccountId')::uuid;
+  delete from loan_accounts where id = (p->>'loanAccountId')::uuid;
+  perform log_audit('DELETE', 'LoanAccount', p->>'loanAccountId', p);
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
 -- ---------- Aggregate fetch for the frontend ----------
 -- Mirrors getAllData() — one call returns everything the dashboard needs,
 -- with each account's live current value computed.
@@ -598,11 +913,16 @@ declare
   v_borrowers jsonb;
   v_accounts jsonb;
   v_transactions jsonb;
+  v_loan_accounts jsonb;
+  v_loan_transactions jsonb;
   v_as_on timestamptz := now();
 begin
+  perform refresh_overdue_status();
+
   select coalesce(jsonb_agg(to_jsonb(i)), '[]'::jsonb) into v_investors from investors i;
   select coalesce(jsonb_agg(to_jsonb(b)), '[]'::jsonb) into v_borrowers from borrowers b;
   select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_transactions from transactions t;
+  select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_loan_transactions from loan_transactions t;
 
   select coalesce(jsonb_agg(
     to_jsonb(a) || jsonb_build_object(
@@ -616,13 +936,32 @@ begin
   from accounts a
   cross join lateral compute_account_value(a.id, current_date) v;
 
+  select coalesce(jsonb_agg(
+    to_jsonb(la) || jsonb_build_object(
+      'runningBalance', v.running_balance,
+      'lastEventDate', v.last_event_date,
+      'daysSinceLastEvent', v.days_since_last_event,
+      'accruedInterest', v.accrued_interest,
+      'currentValue', v.current_value,
+      'emiSchedule', coalesce((
+        select jsonb_agg(to_jsonb(s) order by s.installment_no)
+        from loan_emi_schedule s
+        where s.loan_account_id = la.id
+      ), '[]'::jsonb)
+    )
+  ), '[]'::jsonb) into v_loan_accounts
+  from loan_accounts la
+  cross join lateral compute_loan_value(la.id, current_date) v;
+
   return jsonb_build_object(
     'ok', true,
     'asOnDate', v_as_on,
     'investors', v_investors,
     'accounts', v_accounts,
     'transactions', v_transactions,
-    'borrowers', v_borrowers
+    'borrowers', v_borrowers,
+    'loanAccounts', v_loan_accounts,
+    'loanTransactions', v_loan_transactions
   );
 end;
 $$;
