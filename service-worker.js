@@ -4,7 +4,7 @@
  * Network-first for app shell so new builds appear without manual cache deletion.
  */
 
-const CACHE_VERSION = 'finsphere-v1-31';
+const CACHE_VERSION = 'finsphere-v1-32';
 const APP_SHELL = [
   './',
   './index.html',

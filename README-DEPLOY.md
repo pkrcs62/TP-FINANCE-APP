@@ -1,4 +1,4 @@
-# FinSphere v1.31 — Supabase Deployment Guide
+# FinSphere v1.32 — Supabase Deployment Guide
 
 This version replaces the Google Sheets/Apps Script backend with a real
 Postgres database on Supabase and adds separate Investor Mode / Borrower Mode dashboards. This guide covers the full path:

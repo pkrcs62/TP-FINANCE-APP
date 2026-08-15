@@ -649,11 +649,20 @@ $$;
 -- Standard reducing-balance EMI: EMI = P * r * (1+r)^n / ((1+r)^n - 1),
 -- where r is the MONTHLY rate (annual roi / 12 / 100) and n is tenure in
 -- months. Falls back to a simple principal/n split if roi is zero.
+-- Flat / add-on interest EMI, per Prashant's actual lending method (NOT
+-- bank-style reducing-balance): total interest is calculated once, upfront,
+-- on the full principal for the whole tenure, then divided evenly across
+-- all months alongside the principal. Every month's EMI is therefore
+-- identical in both amount AND in its principal/interest split — unlike a
+-- reducing-balance loan where the split shifts each month.
+-- Example: Rs 10,000 at 36% p.a. for 10 months
+--   interest = 10,000 * 0.36 * (10/12) = Rs 3,000
+--   total payable = Rs 13,000 -> EMI = Rs 1,300/month
 create or replace function calc_emi_amount(p_principal numeric, p_roi_annual numeric, p_tenure_months integer)
 returns numeric language plpgsql immutable as $$
 declare
-  r numeric;
-  emi numeric;
+  total_interest numeric;
+  total_payable numeric;
 begin
   if p_tenure_months is null or p_tenure_months <= 0 then
     raise exception 'Tenure must be a positive number of months';
@@ -661,9 +670,9 @@ begin
   if p_roi_annual is null or p_roi_annual = 0 then
     return round(p_principal / p_tenure_months, 2);
   end if;
-  r := (p_roi_annual / 12.0) / 100.0;
-  emi := p_principal * r * power(1 + r, p_tenure_months) / (power(1 + r, p_tenure_months) - 1);
-  return round(emi, 2);
+  total_interest := p_principal * (p_roi_annual / 100.0) * (p_tenure_months / 12.0);
+  total_payable := p_principal + total_interest;
+  return round(total_payable / p_tenure_months, 2);
 end;
 $$;
 
@@ -674,10 +683,11 @@ create or replace function generate_emi_schedule(p_loan_account_id uuid)
 returns void language plpgsql as $$
 declare
   la loan_accounts%rowtype;
-  r numeric;
-  balance numeric;
+  total_interest numeric;
   interest_part numeric;
   principal_part numeric;
+  balance numeric;
+  running_principal numeric := 0;
   i integer;
 begin
   select * into la from loan_accounts where id = p_loan_account_id;
@@ -686,24 +696,29 @@ begin
 
   delete from loan_emi_schedule where loan_account_id = p_loan_account_id;
 
-  r := (la.roi / 12.0) / 100.0;
+  -- Flat / add-on interest: the same principal and interest amount recurs
+  -- every month (not a shrinking interest / growing principal split like a
+  -- reducing-balance loan) — this matches how the EMI amount itself is
+  -- computed in calc_emi_amount. Due dates and per-installment PENDING/
+  -- PAID/OVERDUE status are still tracked per installment as before.
+  total_interest := la.principal * (la.roi / 100.0) * (la.tenure_months / 12.0);
+  interest_part := round(total_interest / la.tenure_months, 2);
+  principal_part := round(la.principal / la.tenure_months, 2);
   balance := la.principal;
 
   for i in 1..la.tenure_months loop
-    interest_part := round(balance * r, 2);
-    principal_part := round(la.emi_amount - interest_part, 2);
+    running_principal := running_principal + principal_part;
     -- Last installment absorbs any rounding remainder so the schedule
-    -- closes exactly to zero.
+    -- closes exactly to zero, same safeguard as before.
     if i = la.tenure_months then
-      principal_part := balance;
+      principal_part := la.principal - (running_principal - principal_part);
     end if;
     balance := round(balance - principal_part, 2);
 
     insert into loan_emi_schedule (loan_account_id, installment_no, due_date, emi_amount,
       principal_component, interest_component, closing_balance, status)
     values (p_loan_account_id, i, (la.disbursement_date + (i || ' months')::interval)::date,
-      case when i = la.tenure_months then principal_part + interest_part else la.emi_amount end,
-      principal_part, interest_part, greatest(balance, 0), 'PENDING');
+      la.emi_amount, principal_part, interest_part, greatest(balance, 0), 'PENDING');
   end loop;
 end;
 $$;

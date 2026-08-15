@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FinSphere v1.31 &mdash; Borrow • Invest • Grow</title>
+<title>FinSphere v1.32 &mdash; Borrow • Invest • Grow</title>
 
 <!-- PWA: installability -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -564,6 +564,49 @@
   .toast.error{border-color:var(--red);box-shadow:0 8px 30px rgba(0,0,0,.4), 0 0 24px var(--red-glow);}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
 
+  /* Cred-style success confirmation — animated checkmark, used for the
+     moments that matter (repayment recorded, borrower added, etc.) rather
+     than every minor background event, which still uses the quiet toast. */
+  .success-modal-overlay{
+    position:fixed;inset:0;z-index:4000;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.55);
+    opacity:0;pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  .success-modal-overlay.show{opacity:1;pointer-events:auto;}
+  .success-modal-card{
+    background:var(--panel);border:1px solid var(--border-hi);border-radius:var(--r-md);
+    padding:2rem 2.2rem 1.7rem;text-align:center;min-width:240px;max-width:320px;
+    box-shadow:0 24px 70px rgba(0,0,0,.5);
+    transform:scale(.85) translateY(8px);
+    transition:transform .32s var(--ease-pop);
+  }
+  .success-modal-overlay.show .success-modal-card{transform:scale(1) translateY(0);}
+  .success-checkmark{width:64px;height:64px;margin:0 auto .9rem;display:block;}
+  .success-checkmark-circle{
+    stroke:var(--mint);stroke-width:4;
+    stroke-dasharray:227;stroke-dashoffset:227;
+  }
+  .success-checkmark-check{
+    stroke:var(--mint);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:48;stroke-dashoffset:48;
+  }
+  .success-checkmark.draw .success-checkmark-circle{
+    animation:successCircleDraw .5s var(--ease-out) forwards;
+  }
+  .success-checkmark.draw .success-checkmark-check{
+    animation:successCheckDraw .35s var(--ease-out) .4s forwards;
+  }
+  @keyframes successCircleDraw{to{stroke-dashoffset:0;}}
+  @keyframes successCheckDraw{to{stroke-dashoffset:0;}}
+  .success-modal-title{font-family:var(--serif);font-size:1.2rem;font-weight:700;color:var(--ink);margin-bottom:.25rem;}
+  .success-modal-subtitle{font-size:.84rem;color:var(--muted);line-height:1.4;}
+  @media (prefers-reduced-motion: reduce){
+    .success-checkmark.draw .success-checkmark-circle,
+    .success-checkmark.draw .success-checkmark-check{animation:none;stroke-dashoffset:0;}
+  }
+
   /* PWA forced update — blocks the app until the person updates */
   .force-update-overlay{
     position:fixed;inset:0;background:var(--bg);
@@ -726,25 +769,25 @@
     width:780px;
     background:var(--stamp-bg);
     border:5px double var(--stamp-border);
-    padding:36px 42px;
+    padding:26px 34px;
     font-family:'Noto Sans Devanagari','Inter',sans-serif;
     color:var(--stamp-ink);
-    font-size:13px;
-    line-height:1.75;
+    font-size:11.5px;
+    line-height:1.5;
   }
   #hindiAgreementSource h1{
-    text-align:center;font-size:20px;letter-spacing:.02em;margin:0 0 14px;color:var(--stamp-ink);
+    text-align:center;font-size:17px;letter-spacing:.02em;margin:0 0 10px;color:var(--stamp-ink);
   }
   #hindiAgreementSource h2{
-    text-align:center;font-size:13px;font-weight:700;margin:14px 0 8px;color:var(--stamp-ink);
+    text-align:center;font-size:11.5px;font-weight:700;margin:9px 0 5px;color:var(--stamp-ink);
   }
-  #hindiAgreementSource p{margin:0 0 10px;text-align:justify;}
-  #hindiAgreementSource .clause-label{font-weight:700;margin:12px 0 4px;}
-  #hindiAgreementSource .italic-note{font-style:italic;font-size:11px;color:#3f5a37;}
-  #hindiAgreementSource .sign-grid{display:flex;justify-content:space-between;margin-top:34px;gap:24px;}
+  #hindiAgreementSource p{margin:0 0 6px;text-align:justify;}
+  #hindiAgreementSource .clause-label{font-weight:700;margin:8px 0 3px;}
+  #hindiAgreementSource .italic-note{font-style:italic;font-size:9.5px;color:#3f5a37;}
+  #hindiAgreementSource .sign-grid{display:flex;justify-content:space-between;margin-top:20px;gap:24px;}
   #hindiAgreementSource .sign-col{flex:1;}
-  #hindiAgreementSource .sign-col .role{font-weight:700;margin-bottom:10px;}
-  #hindiAgreementSource .sign-col div{margin-bottom:8px;}
+  #hindiAgreementSource .sign-col .role{font-weight:700;margin-bottom:6px;}
+  #hindiAgreementSource .sign-col div{margin-bottom:5px;}
 
   footer.pagefoot{
     max-width:920px;margin:2rem auto 0;padding:1.2rem 1.1rem;
@@ -1143,6 +1186,7 @@
     <button data-screen="dashboard">Dashboard</button>
     <button data-screen="borrowers">Borrowers</button>
     <button data-screen="loans">Loans</button>
+    <button data-screen="borrower-reports">Reports</button>
     <button data-screen="settings">Settings</button>
   </nav>
 
@@ -1389,6 +1433,47 @@
     <div id="loanProfileContent"></div>
   </section>
 
+  <!-- BORROWER REPORTS -->
+  <section class="screen" id="screen-borrower-reports">
+    <div class="card">
+      <h2>Reports <span class="sub">as-on-date position, exportable per borrower, per loan, or combined</span></h2>
+      <div class="field-row">
+        <div>
+          <label for="brwRepType">Report Type</label>
+          <select id="brwRepType">
+            <option value="borrower">By Borrower</option>
+            <option value="loan">By Loan Account</option>
+            <option value="portfolio">Portfolio (All Loans Combined)</option>
+          </select>
+        </div>
+        <div>
+          <label for="brwRepAsOnDate">As on Date</label>
+          <input type="date" id="brwRepAsOnDate">
+        </div>
+      </div>
+      <div id="brwRepBorrowerField">
+        <label for="brwRepBorrower">Borrower</label>
+        <select id="brwRepBorrower"></select>
+      </div>
+      <div id="brwRepLoanField" style="display:none;">
+        <label for="brwRepLoan">Loan Account</label>
+        <select id="brwRepLoan"></select>
+      </div>
+      <button class="btn" id="btnGenerateBorrowerReport">Generate Report</button>
+    </div>
+
+    <div class="card" id="brwReportResultCard" style="display:none;">
+      <div class="investor-header">
+        <h2 id="brwReportTitle">Report</h2>
+        <div class="btn-row" style="margin-left:auto;">
+          <button class="btn secondary small" id="btnBrwReportPdf">Download PDF</button>
+          <button class="btn secondary small" id="btnBrwReportExcel">Download Excel</button>
+        </div>
+      </div>
+      <div id="brwReportBody"></div>
+    </div>
+  </section>
+
   <!-- REPORTS -->
   <section class="screen" id="screen-reports">
     <div class="card">
@@ -1457,6 +1542,17 @@
 </footer>
 
 <div class="toast" id="toast"></div>
+
+<div class="success-modal-overlay" id="successModalOverlay">
+  <div class="success-modal-card">
+    <svg class="success-checkmark" id="successCheckmark" viewBox="0 0 80 80">
+      <circle class="success-checkmark-circle" cx="40" cy="40" r="36" fill="none"/>
+      <path class="success-checkmark-check" fill="none" d="M23 41l11 11 23-23"/>
+    </svg>
+    <div class="success-modal-title" id="successModalTitle"></div>
+    <div class="success-modal-subtitle" id="successModalSubtitle"></div>
+  </div>
+</div>
 
 <div class="force-update-overlay" id="updateBanner">
   <div class="brand">
@@ -1765,7 +1861,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'v1.31';
+const APP_VERSION = 'v1.32';
 
 function safeConnectionHost(){
   try { return state.scriptUrl ? new URL(state.scriptUrl).hostname : 'not configured'; }
@@ -2014,6 +2110,29 @@ function toast(msg, isError){
   clearTimeout(toast._t);
   toast._t = setTimeout(()=> t.classList.remove('show'), 3200);
 }
+
+// Cred-style success confirmation: a centered card with an animated
+// checkmark that draws itself in, used for the moments that matter most —
+// a repayment recorded, a borrower added, a deposit made, etc. Auto-
+// dismisses; also closable by tapping the backdrop. Distinct from toast(),
+// which stays as the quiet, low-emphasis notice for background events.
+function showSuccessModal(title, subtitle){
+  const overlay = document.getElementById('successModalOverlay');
+  document.getElementById('successModalTitle').textContent = title;
+  document.getElementById('successModalSubtitle').textContent = subtitle || '';
+  const check = document.getElementById('successCheckmark');
+  overlay.classList.remove('show');
+  check.classList.remove('draw');
+  void overlay.offsetWidth;
+  overlay.classList.add('show');
+  requestAnimationFrame(()=> check.classList.add('draw'));
+  clearTimeout(showSuccessModal._t);
+  showSuccessModal._t = setTimeout(()=> overlay.classList.remove('show'), 2200);
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  const overlay = document.getElementById('successModalOverlay');
+  if (overlay) overlay.addEventListener('click', ()=> overlay.classList.remove('show'));
+});
 
 // ---------- API layer (Supabase RPC) ----------
 // Keeps the exact same apiGet(action) / apiPost(action, payload) call
@@ -2274,6 +2393,7 @@ function renderAll(){
   } else {
     renderBorrowerList();
     renderLoanAccountList();
+    renderBorrowerReportDropdowns();
     if (state.selectedLoanAccountId) renderLoanProfile(state.selectedLoanAccountId);
   }
 }
@@ -2658,11 +2778,16 @@ function renderLoanProfile(id){
         </div>
         <div class="btn-row" style="margin-left:auto;">
           ${loan.status !== 'CLOSED' ? `<button class="btn small" id="btnRecordRepayment">Record Repayment</button>` : ''}
-          <button class="btn secondary small" id="btnLoanExportPdf">Statement PDF</button>
-          <button class="btn secondary small" id="btnLoanAgreement">Generate Loan Agreement</button>
-          <button class="btn secondary small" id="btnLoanAgreementHindi">ऋण अनुबंध (Hindi)</button>
-          ${loan.accountType === 'EMI' ? `<button class="btn secondary small" id="btnEmiScheduleView">View EMI Schedule</button><button class="btn secondary small" id="btnEmiSchedulePdf">EMI Schedule PDF</button><button class="btn secondary small" id="btnEmiScheduleEmail">Send Schedule on Email</button>` : ''}
-          <button class="btn danger small" id="btnDeleteLoan">Delete Loan Account</button>
+          <div class="dropdown-wrap">
+            <button class="btn secondary small" id="btnLoanMoreMenu">More &#9662;</button>
+            <div class="dropdown-menu" id="loanMoreMenu">
+              <button data-action="statement">Statement PDF</button>
+              <button data-action="agreement-en">Generate Loan Agreement</button>
+              <button data-action="agreement-hi">ऋण अनुबंध (Hindi)</button>
+              ${loan.accountType === 'EMI' ? `<button data-action="view-schedule">View EMI Schedule</button><button data-action="email-schedule">Send Schedule on Email</button>` : ''}
+              <button data-action="delete" class="danger-item">Delete Loan Account</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="profile-details">
@@ -2690,17 +2815,27 @@ function renderLoanProfile(id){
 
   const repayBtn = document.getElementById('btnRecordRepayment');
   if (repayBtn) repayBtn.addEventListener('click', ()=> openRepayModal(loan));
-  document.getElementById('btnLoanExportPdf').addEventListener('click', ()=> generateLoanStatementPdf(loan, borrower, txns));
-  document.getElementById('btnLoanAgreement').addEventListener('click', ()=> generateLoanAccountAgreementPdf(loan, borrower));
-  document.getElementById('btnLoanAgreementHindi').addEventListener('click', ()=> generateLoanAccountAgreementPdfHindi(loan, borrower));
-  document.getElementById('btnDeleteLoan').addEventListener('click', ()=> deleteLoanAccountFlow(loan));
-  if (loan.accountType === 'EMI'){
-    document.getElementById('btnEmiScheduleView').addEventListener('click', ()=> toggleEmiScheduleView(loan));
-    document.getElementById('btnEmiSchedulePdf').addEventListener('click', ()=> generateEmiSchedulePdf(loan, borrower));
-    document.getElementById('btnEmiScheduleEmail').addEventListener('click', ()=> {
-      toast('Email sending isn\'t set up yet — this will send the schedule once email is connected.');
-    });
-  }
+
+  const moreBtn = document.getElementById('btnLoanMoreMenu');
+  const moreMenu = document.getElementById('loanMoreMenu');
+  moreBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.dropdown-menu.open').forEach(m=> { if (m !== moreMenu) m.classList.remove('open'); });
+    moreMenu.classList.toggle('open');
+  });
+  moreMenu.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    moreMenu.classList.remove('open');
+    switch(btn.dataset.action){
+      case 'statement': generateLoanStatementPdf(loan, borrower, txns); break;
+      case 'agreement-en': generateLoanAccountAgreementPdf(loan, borrower); break;
+      case 'agreement-hi': generateLoanAccountAgreementPdfHindi(loan, borrower); break;
+      case 'view-schedule': toggleEmiScheduleView(loan); break;
+      case 'email-schedule': toast('Email sending isn\'t set up yet — this will send the schedule once email is connected.'); break;
+      case 'delete': deleteLoanAccountFlow(loan); break;
+    }
+  });
 }
 
 function toggleEmiScheduleView(loan){
@@ -2772,10 +2907,14 @@ function updateEmiPreview(){
   const roi = Number(document.getElementById('mLoanRoi').value || 0);
   const n = Number(document.getElementById('mLoanTenure').value || 0);
   if (!p || !n){ box.style.display = 'none'; return; }
-  const r = (roi / 12) / 100;
-  const emi = r > 0 ? (p * r * Math.pow(1+r, n)) / (Math.pow(1+r, n) - 1) : p / n;
+  // Flat / add-on interest, matching calc_emi_amount on the backend: total
+  // interest is computed once on the full principal for the whole tenure,
+  // then split evenly across months alongside the principal — not a
+  // shrinking reducing-balance interest portion.
+  const totalInterest = p * (roi / 100) * (n / 12);
+  const emi = (p + totalInterest) / n;
   box.style.display = 'block';
-  box.innerHTML = `<div style="font-weight:700;color:var(--ink);">Estimated EMI: ${fmtMoneyWhole(emi)} / month</div><div style="font-size:.82rem;color:var(--muted);margin-top:.2rem;">Over ${n} months, reducing-balance interest at ${roi || 0}% p.a. The exact schedule is generated when you save.</div>`;
+  box.innerHTML = `<div style="font-weight:700;color:var(--ink);">Estimated EMI: ${fmtMoneyWhole(emi)} / month</div><div style="font-size:.82rem;color:var(--muted);margin-top:.2rem;">Over ${n} months, flat interest of ${fmtMoneyWhole(totalInterest)} total at ${roi || 0}% p.a. The exact schedule is generated when you save.</div>`;
 }
 
 document.getElementById('btnAddLoan').addEventListener('click', openLoanModal);
@@ -2808,18 +2947,12 @@ document.getElementById('btnLoanModalSave').addEventListener('click', async ()=>
       paymentMode, remarks
     });
     closeLoanModal();
-    toast('Loan account created.');
     await refreshAll(false);
     const newLoan = state.loanAccounts.find(la => String(la.id) === String(result.loanAccount.id));
     if (newLoan){
       openLoanProfile(newLoan.id);
-      // EMI schedule PDF should be ready the moment the account exists —
-      // generate it immediately rather than waiting for the user to ask.
-      if (loanModalType === 'EMI'){
-        const borrower = state.borrowers.find(b => String(b.id) === String(borrowerId));
-        generateEmiSchedulePdf(newLoan, borrower);
-      }
     }
+    showSuccessModal('Loan Account Created', `${loanModalType === 'EMI' ? 'EMI' : 'Bullet'} loan of ${fmtMoneyWhole(principal)} disbursed.`);
   }catch(err){
     errEl.textContent = err.message;
     errEl.classList.add('show');
@@ -2863,7 +2996,7 @@ document.getElementById('btnRepayModalSave').addEventListener('click', async ()=
   try{
     await apiPost('repayLoan', { loanAccountId: repayModalLoan.id, date, amount, paymentMode, remarks });
     closeRepayModal();
-    toast('Repayment recorded.');
+    showSuccessModal('Repayment Recorded', `${fmtMoneyWhole(amount)} received for ${repayModalLoan.loanNo}`);
     await refreshAll(false);
     renderLoanProfile(repayModalLoan.id);
   }catch(err){
@@ -2879,59 +3012,6 @@ document.getElementById('btnRepayModalSave').addEventListener('click', async ()=
 // name/date/loan details, then a bordered tabular schedule filling the
 // page. Called automatically the moment an EMI loan account is created,
 // and also available on-demand from the loan profile screen.
-function generateEmiSchedulePdf(loan, borrower){
-  if (!window.jspdf || !window.jspdf.jsPDF){ toast('PDF generator is not ready yet.', true); return; }
-  const rows = loan.emiSchedule || [];
-  if (!rows.length){ toast('EMI schedule not available for this loan yet.', true); return; }
-
-  const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
-  const margin = 36;
-  let y = 42;
-
-  doc.setFont('helvetica','bold'); doc.setFontSize(20);
-  doc.text('TP Finance', pageW/2, y, { align:'center' }); y += 24;
-  doc.setFontSize(15);
-  doc.text('EMI Schedule', pageW/2, y, { align:'center' }); y += 20;
-
-  doc.setDrawColor(19,32,39); doc.setLineWidth(1);
-  doc.line(margin, y, pageW - margin, y); y += 18;
-
-  doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
-  const leftX = margin, rightX = pageW/2 + 10;
-  doc.text(`Borrower: ${borrower ? borrower.name : ''}`, leftX, y);
-  doc.text(`Loan No.: ${loan.loanNo}`, rightX, y); y += 16;
-  doc.text(`Mobile: ${borrower ? (borrower.mobile || '—') : '—'}`, leftX, y);
-  doc.text(`Disbursement Date: ${fmtDate(loan.disbursementDate)}`, rightX, y); y += 16;
-  doc.text(`Principal: ${fmtMoneyWhole(loan.principal)}`, leftX, y);
-  doc.text(`ROI: ${Number(loan.roi).toFixed(2)}% p.a.`, rightX, y); y += 16;
-  doc.text(`Tenure: ${loan.tenureMonths} months`, leftX, y);
-  doc.text(`EMI Amount: ${fmtMoneyWhole(loan.emiAmount)}`, rightX, y); y += 20;
-
-  doc.autoTable({
-    startY: y,
-    head: [['#','Due Date','EMI (Rs.)','Principal (Rs.)','Interest (Rs.)','Balance (Rs.)']],
-    body: rows.map(r=> [
-      r.installment_no ?? r.installmentNo,
-      fmtDate(r.due_date ?? r.dueDate),
-      fmtMoney(r.emi_amount ?? r.emiAmount),
-      fmtMoney(r.principal_component ?? r.principalComponent),
-      fmtMoney(r.interest_component ?? r.interestComponent),
-      fmtMoney(r.closing_balance ?? r.closingBalance)
-    ]),
-    styles: { fontSize: 9.5, cellPadding: 5, lineWidth: 0.6, lineColor: [120,120,120] },
-    headStyles: { fillColor: [15, 184, 148], textColor: [10,20,18], fontStyle: 'bold', lineWidth: 0.6, lineColor: [80,80,80] },
-    theme: 'grid',
-    margin: { left: margin, right: margin }
-  });
-
-  const finalY = doc.lastAutoTable.finalY + 14;
-  doc.setFontSize(8.5); doc.setTextColor(110,110,110);
-  doc.text('This is a computer-generated EMI schedule based on reducing-balance interest and is subject to change if repayments deviate from schedule.', margin, finalY, { maxWidth: pageW - margin*2 });
-
-  doc.save(`EMI-Schedule-${loan.loanNo}.pdf`);
-}
-
 function generateLoanStatementPdf(loan, borrower, txns){
   if (!window.jspdf || !window.jspdf.jsPDF){ toast('PDF generator is not ready yet.', true); return; }
   const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
@@ -3457,7 +3537,7 @@ document.getElementById('btnModalSave').addEventListener('click', async ()=>{
       toast('Investor updated.');
     } else {
       await apiPost('addInvestor', {name, fatherName, address, mobile, email, remarks});
-      toast('Investor added.');
+      showSuccessModal('Investor Added', `${name} has been added.`);
     }
     closeInvestorModal();
     await refreshAll();
@@ -3701,7 +3781,7 @@ document.getElementById('btnBorrowerModalSave').addEventListener('click', async 
       toast('Borrower updated.');
     } else {
       await apiPost('addBorrower', {name, fatherName, address, mobile, email, photo: borrowerPhotoData, remarks, references: cleanRefs});
-      toast('Borrower added.');
+      showSuccessModal('Borrower Added', `${name} has been added.`);
     }
     closeBorrowerModal();
     await refreshAll();
@@ -4008,7 +4088,7 @@ document.getElementById('btnSubmitInvestment').addEventListener('click', async (
     const res = await apiPost('addInvestment', payload);
     const investor = state.investors.find(i=> String(i.id)===String(investorId));
     const accountNo = res.account ? res.account.accountNo : (document.getElementById('invModeChoice').dataset.matchedAccountNo || '');
-    toast(res.topUp ? `Funds added to ${accountNo}.` : `Account ${accountNo} created.`);
+    showSuccessModal('Amount Deposited', `${fmtMoneyWhole(amount)} ${res.topUp ? 'added to' : 'deposited into new account'} ${accountNo}.`);
 
     generateReceiptPdf({
       investor, accountNo, amount, date, roi: depositState.topUpAccountId ? null : roi,
@@ -4153,7 +4233,7 @@ async function submitWithdrawal(fullSettlement){
   btn.disabled = true; btn.textContent = 'Processing…';
   try{
     const res = await apiPost('withdraw', {accountId, date, amount, remarks, fullSettlement});
-    toast(fullSettlement ? 'Account settled and closed.' : 'Withdrawal recorded.');
+    showSuccessModal(fullSettlement ? 'Account Settled' : 'Withdrawal Recorded', `${fmtMoneyWhole(amount)} paid out${fullSettlement ? ' — account closed.' : '.'}`);
 
     const investor = state.investors.find(i=> String(i.id)===String(acc.investorId));
     generateReceiptPdf({
@@ -4189,6 +4269,189 @@ document.getElementById('btnFullSettle').addEventListener('click', ()=>{
 // ---------- Reports ----------
 
 let lastReportData = null; // holds the most recently generated report for export
+
+function renderBorrowerReportDropdowns(){
+  const bSel = document.getElementById('brwRepBorrower');
+  const bCurrent = bSel.value;
+  const sortedBorrowers = [...state.borrowers].sort((a,b)=> a.name.localeCompare(b.name));
+  bSel.innerHTML = sortedBorrowers.map(b=> `<option value="${b.id}">${escapeHtml(b.name)} (${b.id})</option>`).join('');
+  if (bCurrent) bSel.value = bCurrent;
+
+  const lSel = document.getElementById('brwRepLoan');
+  const lCurrent = lSel.value;
+  const sortedLoans = [...state.loanAccounts].sort((a,b)=> new Date(b.disbursementDate||0) - new Date(a.disbursementDate||0));
+  lSel.innerHTML = sortedLoans.map(la=>{
+    const b = state.borrowers.find(x=> String(x.id) === String(la.borrowerId));
+    return `<option value="${la.id}">${escapeHtml(la.loanNo)} — ${escapeHtml(b ? b.name : '?')}</option>`;
+  }).join('');
+  if (lCurrent) lSel.value = lCurrent;
+}
+
+document.getElementById('brwRepType').addEventListener('change', ()=>{
+  const type = document.getElementById('brwRepType').value;
+  document.getElementById('brwRepBorrowerField').style.display = (type === 'borrower') ? '' : 'none';
+  document.getElementById('brwRepLoanField').style.display = (type === 'loan') ? '' : 'none';
+});
+
+// A loan's overdue picture, computed from its EMI schedule as of a given
+// date — missed installment count, how many days the OLDEST unpaid
+// installment has been overdue, and the total rupee amount still owed on
+// installments past their due date. Bullet loans have no per-installment
+// schedule, so they only ever contribute to the "is this loan itself
+// overdue" flag (loan.status), not to these EMI-specific figures.
+function loanOverdueStats(loan, asOnDate){
+  const rows = (loan.emiSchedule || []);
+  const overdueRows = rows.filter(r=>{
+    const due = new Date(r.due_date ?? r.dueDate);
+    const status = r.status;
+    return (status === 'OVERDUE') || (status === 'PENDING' && due < asOnDate);
+  });
+  const missedCount = overdueRows.length;
+  const totalOverdueAmount = overdueRows.reduce((s,r)=> s + Number(r.emi_amount ?? r.emiAmount ?? 0), 0);
+  let daysOverdue = 0;
+  if (overdueRows.length){
+    const oldestDue = overdueRows.reduce((min,r)=>{
+      const d = new Date(r.due_date ?? r.dueDate);
+      return d < min ? d : min;
+    }, new Date(overdueRows[0].due_date ?? overdueRows[0].dueDate));
+    daysOverdue = Math.max(0, Math.floor((asOnDate - oldestDue) / (1000*60*60*24)));
+  }
+  return { missedCount, totalOverdueAmount, daysOverdue };
+}
+
+function buildLoanReportRow(loan, asOnDate){
+  const borrower = state.borrowers.find(b=> String(b.id) === String(loan.borrowerId));
+  const overdue = loan.accountType === 'EMI' ? loanOverdueStats(loan, asOnDate) : { missedCount: 0, totalOverdueAmount: 0, daysOverdue: 0 };
+  return {
+    loan, borrower,
+    borrowerName: borrower ? borrower.name : '(unknown)',
+    borrowerMobile: borrower ? borrower.mobile : '',
+    outstanding: Number(loan.currentValue || 0),
+    ...overdue
+  };
+}
+
+let lastBorrowerReportRows = [];
+let lastBorrowerReportTitle = '';
+let lastBorrowerReportAsOnDate = null;
+
+document.getElementById('btnGenerateBorrowerReport').addEventListener('click', ()=>{
+  const type = document.getElementById('brwRepType').value;
+  const dateInput = document.getElementById('brwRepAsOnDate').value;
+  const asOnDate = dateInput ? new Date(dateInput + 'T23:59:59') : new Date();
+
+  let loans = [];
+  let title = '';
+  if (type === 'borrower'){
+    const borrowerId = document.getElementById('brwRepBorrower').value;
+    const borrower = state.borrowers.find(b=> String(b.id) === String(borrowerId));
+    if (!borrower){ toast('Select a borrower.', true); return; }
+    loans = state.loanAccounts.filter(la=> String(la.borrowerId) === String(borrowerId));
+    title = `${borrower.name} (${borrower.id}) — as on ${fmtDate(asOnDate)}`;
+  } else if (type === 'loan'){
+    const loanId = document.getElementById('brwRepLoan').value;
+    const loan = state.loanAccounts.find(la=> String(la.id) === String(loanId));
+    if (!loan){ toast('Select a loan account.', true); return; }
+    loans = [loan];
+    title = `${loan.loanNo} — as on ${fmtDate(asOnDate)}`;
+  } else {
+    loans = state.loanAccounts;
+    title = `Portfolio Report — All Loans Combined — as on ${fmtDate(asOnDate)}`;
+  }
+
+  const rows = loans.map(la=> buildLoanReportRow(la, asOnDate));
+  lastBorrowerReportRows = rows;
+  lastBorrowerReportTitle = title;
+  lastBorrowerReportAsOnDate = asOnDate;
+
+  document.getElementById('brwReportTitle').textContent = title;
+  document.getElementById('brwReportResultCard').style.display = 'block';
+  document.getElementById('brwReportBody').innerHTML = renderBorrowerReportTable(rows);
+  toast('Report generated.');
+});
+
+function renderBorrowerReportTable(rows){
+  if (!rows.length) return '<div class="empty-state">No loan accounts to report on.</div>';
+
+  const totalPrincipal = rows.reduce((s,r)=> s + Number(r.loan.principal||0), 0);
+  const totalOutstanding = rows.reduce((s,r)=> s + r.outstanding, 0);
+  const totalOverdueAmt = rows.reduce((s,r)=> s + r.totalOverdueAmount, 0);
+  const overdueCount = rows.filter(r=> r.missedCount > 0).length;
+
+  const summary = `<div class="metrics" style="margin-bottom:1rem;">
+    <div class="metric"><div class="label">Total Principal</div><div class="value">${fmtMoneyWhole(totalPrincipal)}</div></div>
+    <div class="metric"><div class="label">Total Outstanding</div><div class="value">${fmtMoneyWhole(totalOutstanding)}</div></div>
+    <div class="metric"><div class="label">Loans Overdue</div><div class="value${overdueCount>0?' neg':''}">${overdueCount}</div></div>
+    <div class="metric"><div class="label">Total Overdue Amt</div><div class="value${totalOverdueAmt>0?' neg':''}">${fmtMoneyWhole(totalOverdueAmt)}</div></div>
+  </div>`;
+
+  const table = `<table class="ledger"><thead><tr>
+    <th>Loan No.</th><th>Borrower</th><th>Type</th><th>Principal</th><th>Outstanding</th><th>Missed EMIs</th><th>Days Overdue</th><th>Overdue Amt</th>
+  </tr></thead><tbody>` + rows.map(r=> `
+    <tr>
+      <td data-label="Loan No.">${escapeHtml(r.loan.loanNo)}</td>
+      <td data-label="Borrower" class="name-cell">${escapeHtml(r.borrowerName)}</td>
+      <td data-label="Type"><span class="tag ${r.loan.accountType==='EMI'?'active':'inactive'}">${r.loan.accountType}</span></td>
+      <td data-label="Principal">${fmtMoneyWhole(r.loan.principal)}</td>
+      <td data-label="Outstanding">${fmtMoneyWhole(r.outstanding)}</td>
+      <td data-label="Missed EMIs">${r.missedCount || '—'}</td>
+      <td data-label="Days Overdue">${r.daysOverdue || '—'}</td>
+      <td data-label="Overdue Amt">${r.totalOverdueAmount ? fmtMoneyWhole(r.totalOverdueAmount) : '—'}</td>
+    </tr>`).join('') + '</tbody></table>';
+
+  return summary + table;
+}
+
+document.getElementById('btnBrwReportPdf').addEventListener('click', ()=>{
+  if (!lastBorrowerReportRows.length){ toast('Generate a report first.', true); return; }
+  if (!window.jspdf || !window.jspdf.jsPDF){ toast('PDF generator is not ready yet.', true); return; }
+  const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 30;
+  let y = 36;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('TP Finance — Borrower Loan Report', pageW/2, y, { align:'center' }); y += 18;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text(lastBorrowerReportTitle, pageW/2, y, { align:'center' }); y += 16;
+
+  doc.autoTable({
+    startY: y,
+    head: [['Loan No.','Borrower','Type','Principal','Outstanding','Missed EMIs','Days Overdue','Overdue Amt']],
+    body: lastBorrowerReportRows.map(r=> [
+      r.loan.loanNo, r.borrowerName, r.loan.accountType,
+      fmtMoney(r.loan.principal), fmtMoney(r.outstanding),
+      r.missedCount || '-', r.daysOverdue || '-', r.totalOverdueAmount ? fmtMoney(r.totalOverdueAmount) : '-'
+    ]),
+    styles: { fontSize: 9, cellPadding: 5, lineWidth: 0.6, lineColor: [120,120,120] },
+    headStyles: { fillColor: [15, 184, 148], textColor: [10,20,18], fontStyle: 'bold', lineWidth: 0.6, lineColor: [80,80,80] },
+    theme: 'grid',
+    margin: { left: margin, right: margin }
+  });
+
+  doc.save(`Borrower-Report-${todayISO()}.pdf`);
+});
+
+document.getElementById('btnBrwReportExcel').addEventListener('click', ()=>{
+  if (!lastBorrowerReportRows.length){ toast('Generate a report first.', true); return; }
+  const sheetRows = lastBorrowerReportRows.map(r=> ({
+    'Loan No.': r.loan.loanNo,
+    'Borrower': r.borrowerName,
+    'Mobile': r.borrowerMobile,
+    'Type': r.loan.accountType,
+    'Principal': Number(r.loan.principal || 0),
+    'ROI %': Number(r.loan.roi || 0),
+    'Outstanding': r.outstanding,
+    'Missed EMIs': r.missedCount,
+    'Days Overdue': r.daysOverdue,
+    'Overdue Amount': r.totalOverdueAmount,
+    'Status': r.loan.status
+  }));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(sheetRows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Borrower Report');
+  XLSX.writeFile(wb, `Borrower-Report-${todayISO()}.xlsx`);
+});
 
 function renderReportInvestorDropdown(){
   const sel = document.getElementById('repInvestor');
@@ -4750,25 +5013,24 @@ async function generateLoanAgreementPdfHindi(row, asOnDate){
       useCORS: true
     });
 
+    // Must fit on exactly one A4 page (same fix as the Borrower Agreement's
+    // Hindi version) — scale the rendered content to fit rather than
+    // paginating a tall image across multiple pages.
     const marginPt = 20;
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const imgWidthPt = pageW - marginPt * 2;
-    const imgHeightPt = (canvas.height * imgWidthPt) / canvas.width;
-    const usablePageHeightPt = pageH - marginPt * 2;
+    const usableW = pageW - marginPt * 2;
+    const usableH = pageH - marginPt * 2;
+    const naturalWidthPt = usableW;
+    const naturalHeightPt = (canvas.height * naturalWidthPt) / canvas.width;
+    const scale = Math.min(1, usableH / naturalHeightPt);
+    const imgWidthPt = naturalWidthPt * scale;
+    const imgHeightPt = naturalHeightPt * scale;
     const imgData = canvas.toDataURL('image/png');
 
-    let heightLeft = imgHeightPt;
-    let y = marginPt;
-    doc.addImage(imgData, 'PNG', marginPt, y, imgWidthPt, imgHeightPt);
-    heightLeft -= usablePageHeightPt;
-
-    while (heightLeft > 0){
-      doc.addPage();
-      y = marginPt - (imgHeightPt - heightLeft);
-      doc.addImage(imgData, 'PNG', marginPt, y, imgWidthPt, imgHeightPt);
-      heightLeft -= usablePageHeightPt;
-    }
+    const x = marginPt + (usableW - imgWidthPt) / 2;
+    const y = marginPt + (usableH - imgHeightPt) / 2;
+    doc.addImage(imgData, 'PNG', x, y, imgWidthPt, imgHeightPt);
 
     doc.save(`Loan-Agreement-Hindi-${investor.id}-${todayISO()}.pdf`);
   }catch(err){
@@ -4792,8 +5054,13 @@ document.getElementById('btnGenerateAgreementHindi').addEventListener('click', (
 // reversed for the Borrower Mode side of the business:
 // First Party / Lender  = TP Finance (the firm itself)
 // Second Party / Borrower = the actual borrower record on file
+// First Party / Lender on the Borrower Agreement — Pooja Chauhan is the
+// proprietor of T.P. Finance, and per instruction the agreement shows her
+// name alone (not "Pooja Chauhan, Prop. T.P. Finance").
 const FIRST_PARTY_BUSINESS = {
-  name: 'T.P. Finance',
+  name: 'Pooja Chauhan',
+  fatherName: 'Sarvesh Singh',
+  address: 'Navipur, Hathras, Uttar Pradesh – 204101',
   phone: '8864904977',
   altPhone: '+91 80775 00156'
 };
@@ -4855,11 +5122,12 @@ function generateLoanAccountAgreementPdf(loan, borrower){
     heading('BETWEEN', 9.5);
 
     label('FIRST PARTY / LENDER:');
-    para(`${FIRST_PARTY_BUSINESS.name}, a lending business, contactable at ${FIRST_PARTY_BUSINESS.phone}.`);
+    para(`Ms. ${FIRST_PARTY_BUSINESS.name}   D/o ${FIRST_PARTY_BUSINESS.fatherName}${FIRST_PARTY_BUSINESS.phone ? '   Mobile: ' + FIRST_PARTY_BUSINESS.phone : ''}`);
+    para(`Resident of ${FIRST_PARTY_BUSINESS.address}`);
     doc.setFont('helvetica','italic');
     doc.setFontSize(7.8);
     doc.setTextColor(70,95,60);
-    para('(Hereinafter referred to as the "First Party" which expression shall unless repugnant to the context include its legal heirs, representatives, successors and assigns.)', 0, 7.8);
+    para('(Hereinafter referred to as the "First Party" which expression shall unless repugnant to the context include her legal heirs, representatives, successors and assigns.)', 0, 7.8);
     y += 2;
 
     heading('AND', 9.5);
@@ -4879,9 +5147,9 @@ function generateLoanAccountAgreementPdf(loan, borrower){
     y += 3;
 
     label('NOW THIS AGREEMENT WITNESSETH AS FOLLOWS:');
-    para(`1. LOAN AMOUNT: The First Party has advanced a loan of ${fmtMoneyWhole(principal)} (Rupees ${principalWords} only) to the Second Party as on ${fmtDate(loanDate)}, at an annual interest rate of ${Number(loan.roi).toFixed(2)}% computed on a reducing balance basis.`, 8);
+    para(`1. LOAN AMOUNT: The First Party has advanced a loan of ${fmtMoneyWhole(principal)} (Rupees ${principalWords} only) to the Second Party as on ${fmtDate(loanDate)}, at an annual interest rate of ${Number(loan.roi).toFixed(2)}%.`, 8);
     if (loan.accountType === 'EMI'){
-      para(`2. REPAYMENT: The Second Party shall repay the loan in ${loan.tenureMonths} equal monthly installments of ${fmtMoneyWhole(loan.emiAmount)} each, computed on a reducing-balance basis, until the loan is fully repaid.`, 8);
+      para(`2. REPAYMENT: The Second Party shall repay the loan in ${loan.tenureMonths} equal monthly installments of ${fmtMoneyWhole(loan.emiAmount)} each, being the principal and interest for the full tenure divided equally across the installment period, until the loan is fully repaid.`, 8);
     } else {
       para('2. REPAYMENT: The Second Party shall repay the principal amount together with interest accrued on a daily reducing-balance basis, in part or in full, at any time, to the First Party.', 8);
     }
@@ -4908,7 +5176,7 @@ function generateLoanAccountAgreementPdf(loan, borrower){
     doc.text(`Name: ${FIRST_PARTY_BUSINESS.name}`, leftX, y);
     doc.text(`Name: ${borrower.name}`, rightX2, y);
     y += 15;
-    const leftAddr = doc.splitTextToSize(`Contact: ${FIRST_PARTY_BUSINESS.phone}`, colW - 10);
+    const leftAddr = doc.splitTextToSize(`Address: ${FIRST_PARTY_BUSINESS.address}`, colW - 10);
     const rightAddr = doc.splitTextToSize(`Address: ${borrower.address || ''}`, colW - 10);
     doc.text(leftAddr, leftX, y);
     doc.text(rightAddr, rightX2, y);
@@ -4933,7 +5201,7 @@ async function generateLoanAccountAgreementPdfHindi(loan, borrower){
     const loanDate = loan.disbursementDate || todayISO();
     const principalWords = numberToWordsIndian(Math.round(principal));
     const repaymentClause = (loan.accountType === 'EMI')
-      ? `2. पुनर्भुगतान: द्वितीय पक्ष ऋण को ${loan.tenureMonths} बराबर मासिक किश्तों में, प्रत्येक ${fmtMoneyWhole(loan.emiAmount)}, घटती शेष राशि के आधार पर, ऋण पूर्ण रूप से चुकता होने तक भुगतान करेगा।`
+      ? `2. पुनर्भुगतान: द्वितीय पक्ष ऋण को ${loan.tenureMonths} बराबर मासिक किश्तों में, प्रत्येक ${fmtMoneyWhole(loan.emiAmount)}, चुकाएगा, जो संपूर्ण अवधि के मूलधन एवं ब्याज को बराबर किश्तों में विभाजित कर निर्धारित की गई है, जब तक ऋण पूर्ण रूप से चुकता न हो जाए।`
       : '2. पुनर्भुगतान: द्वितीय पक्ष मूलधन राशि, दैनिक घटती शेष राशि पर उपचित ब्याज सहित, आंशिक अथवा पूर्ण रूप से, किसी भी समय प्रथम पक्ष को चुकाएगा।';
 
     src.innerHTML = `
@@ -4942,8 +5210,9 @@ async function generateLoanAccountAgreementPdfHindi(loan, borrower){
       <p>यह ऋण अनुबंध आगरा, उत्तर प्रदेश में, दिनांक ${fmtDate(loanDate)} को, ऋण खाता ${loan.loanNo} (${loan.accountType}) हेतु निष्पादित किया गया है।</p>
       <h2>के मध्य</h2>
       <div class="clause-label">प्रथम पक्ष / ऋणदाता:</div>
-      <p>${FIRST_PARTY_BUSINESS.name}, एक ऋणदाता व्यवसाय, संपर्क सूत्र: ${FIRST_PARTY_BUSINESS.phone}</p>
-      <p class="italic-note">(इसके पश्चात "प्रथम पक्ष" के रूप में संदर्भित, जिसमें संदर्भ के प्रतिकूल न होने पर इसके कानूनी उत्तराधिकारी, प्रतिनिधि, उत्तरवर्ती एवं समनुदेशिती सम्मिलित होंगे।)</p>
+      <p>श्रीमती ${FIRST_PARTY_BUSINESS.name} पुत्री श्री ${FIRST_PARTY_BUSINESS.fatherName}${FIRST_PARTY_BUSINESS.phone ? ' — मोबाइल: ' + FIRST_PARTY_BUSINESS.phone : ''}</p>
+      <p>निवासी ${FIRST_PARTY_BUSINESS.address}</p>
+      <p class="italic-note">(इसके पश्चात "प्रथम पक्ष" के रूप में संदर्भित, जिसमें संदर्भ के प्रतिकूल न होने पर उनके कानूनी उत्तराधिकारी, प्रतिनिधि, उत्तरवर्ती एवं समनुदेशिती सम्मिलित होंगे।)</p>
       <h2>तथा</h2>
       <div class="clause-label">द्वितीय पक्ष / ऋणी:</div>
       <p>श्री/श्रीमती ${borrower.name}${borrower.fatherName ? ' पुत्र/पुत्री श्री ' + borrower.fatherName : ''}${borrower.mobile ? ' — मोबाइल: ' + borrower.mobile : ''}</p>
@@ -4968,7 +5237,7 @@ async function generateLoanAccountAgreementPdfHindi(loan, borrower){
         <div class="sign-col">
           <div class="role">प्रथम पक्ष / ऋणदाता</div>
           <div>नाम: ${FIRST_PARTY_BUSINESS.name}</div>
-          <div>संपर्क: ${FIRST_PARTY_BUSINESS.phone}</div>
+          <div>पता: ${FIRST_PARTY_BUSINESS.address}</div>
           <div>दिनांक: ${fmtDate(loanDate)}</div>
           <div>हस्ताक्षर: ______________________</div>
         </div>
@@ -4981,7 +5250,7 @@ async function generateLoanAccountAgreementPdfHindi(loan, borrower){
         </div>
       </div>
 
-      <p class="italic-note" style="margin-top:22px;text-align:center;">यह हिंदी प्रति मूल अंग्रेज़ी अनुबंध का अनुवाद है; किसी भी विवाद की स्थिति में अंग्रेज़ी प्रति मान्य होगी।</p>
+      <p class="italic-note" style="margin-top:14px;text-align:center;">यह हिंदी प्रति मूल अंग्रेज़ी अनुबंध का अनुवाद है; किसी भी विवाद की स्थिति में अंग्रेज़ी प्रति मान्य होगी।</p>
     `;
 
     overlay.classList.add('opaque');
@@ -5006,25 +5275,25 @@ async function generateLoanAccountAgreementPdfHindi(loan, borrower){
       useCORS: true
     });
 
+    // Must fit on exactly one A4 page — rather than paginating a tall image
+    // across multiple pages (which was cutting the agreement into 2 pages),
+    // scale the whole rendered content down to fit the single page, the
+    // same way a printer would shrink-to-fit an oversized document.
     const marginPt = 20;
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const imgWidthPt = pageW - marginPt * 2;
-    const imgHeightPt = (canvas.height * imgWidthPt) / canvas.width;
-    const usablePageHeightPt = pageH - marginPt * 2;
+    const usableW = pageW - marginPt * 2;
+    const usableH = pageH - marginPt * 2;
+    const naturalWidthPt = usableW;
+    const naturalHeightPt = (canvas.height * naturalWidthPt) / canvas.width;
+    const scale = Math.min(1, usableH / naturalHeightPt);
+    const imgWidthPt = naturalWidthPt * scale;
+    const imgHeightPt = naturalHeightPt * scale;
     const imgData = canvas.toDataURL('image/png');
 
-    let heightLeft = imgHeightPt;
-    let y = marginPt;
-    doc.addImage(imgData, 'PNG', marginPt, y, imgWidthPt, imgHeightPt);
-    heightLeft -= usablePageHeightPt;
-
-    while (heightLeft > 0){
-      doc.addPage();
-      y = marginPt - (imgHeightPt - heightLeft);
-      doc.addImage(imgData, 'PNG', marginPt, y, imgWidthPt, imgHeightPt);
-      heightLeft -= usablePageHeightPt;
-    }
+    const x = marginPt + (usableW - imgWidthPt) / 2;
+    const y = marginPt + (usableH - imgHeightPt) / 2;
+    doc.addImage(imgData, 'PNG', x, y, imgWidthPt, imgHeightPt);
 
     doc.save(`Loan-Agreement-Hindi-${loan.loanNo}.pdf`);
   }catch(err){
@@ -5318,7 +5587,7 @@ const ROLE_STORAGE_KEY = 'fs_role';
 const MODE_STORAGE_KEY = 'fs_mode';
 const MODE_META = {
   INVESTOR: { label: 'Investor Mode', short: 'Investor', bodyClass: 'mode-investor', defaultScreen: 'dashboard', screens: ['dashboard', 'investors', 'investor-profile', 'reports', 'settings'] },
-  BORROWER: { label: 'Borrower Mode', short: 'Borrower', bodyClass: 'mode-borrower', defaultScreen: 'dashboard', screens: ['dashboard', 'borrowers', 'borrower-profile', 'loans', 'loan-profile', 'settings'] }
+  BORROWER: { label: 'Borrower Mode', short: 'Borrower', bodyClass: 'mode-borrower', defaultScreen: 'dashboard', screens: ['dashboard', 'borrowers', 'borrower-profile', 'loans', 'loan-profile', 'borrower-reports', 'settings'] }
 };
 let currentRole = null;
 let currentMode = 'BORROWER';
@@ -5368,7 +5637,7 @@ function applyModeVisibility(mode){
   document.getElementById('tabsInvestor').style.display = (mode === 'INVESTOR') ? '' : 'none';
   document.getElementById('tabsBorrower').style.display = (mode === 'BORROWER') ? '' : 'none';
 
-  const allScreens = ['dashboard','investors','borrowers','loans','reports','settings','investor-profile','borrower-profile','loan-profile'];
+  const allScreens = ['dashboard','investors','borrowers','loans','reports','borrower-reports','settings','investor-profile','borrower-profile','loan-profile'];
   allScreens.forEach(name => {
     const el = document.getElementById('screen-' + name);
     if (!el) return;
