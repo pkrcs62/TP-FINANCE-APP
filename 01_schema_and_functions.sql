@@ -93,15 +93,24 @@ create table borrowers (
 -- principal/roi/tenure).
 create table loan_accounts (
   id uuid primary key default gen_random_uuid(),
-  loan_no text not null,                -- e.g. 'BRW01-L001'
+  loan_no text not null,                -- e.g. 'L-1'
   borrower_id text not null references borrowers(id),
-  account_type text not null,           -- BULLET | EMI
-  principal numeric not null,
+  account_type text not null,           -- BULLET | EMI | OVERDRAFT
+  principal numeric not null,           -- for OVERDRAFT this is the initial draw, not the limit
   roi numeric not null,                 -- annual interest rate, percent
   disbursement_date date not null,
   tenure_months integer,                -- EMI only
   emi_amount numeric,                   -- EMI only, computed at creation
   status text not null default 'ACTIVE', -- ACTIVE | CLOSED | OVERDUE
+  sanctioned_limit numeric,             -- OVERDRAFT only: the credit ceiling that draws cannot exceed
+  maturity_date date,                   -- BULLET: disbursement + 12 months, set at creation
+  capitalized_at timestamptz,           -- BULLET: when unpaid interest was capitalized into principal at maturity (once only, null until it happens)
+  capitalization_pre_amount numeric,    -- BULLET: principal just before capitalization
+  capitalization_post_amount numeric,   -- BULLET: principal just after capitalization (pre + accumulated interest)
+  closure_date date,                    -- set when the loan is fully settled/closed
+  fine_waived_amount numeric,           -- EMI: late-fine amount waived at settlement, if any (never overwrites/deletes the original fine — see loan_transactions.txn_type = 'FULL_SETTLEMENT' breakdown)
+  fine_waived_by text,                  -- ADMIN who authorized the waiver
+  fine_waived_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -110,7 +119,7 @@ create table loan_transactions (
   loan_account_id uuid not null references loan_accounts(id),
   borrower_id text not null references borrowers(id),
   txn_date date not null,
-  txn_type text not null,             -- DISBURSEMENT | REPAYMENT | FULL_SETTLEMENT
+  txn_type text not null,             -- DISBURSEMENT | DRAW | REPAYMENT | FULL_SETTLEMENT | INTEREST_CAPITALIZATION
   amount numeric not null,
   balance_before numeric not null default 0,
   interest_added numeric not null default 0,
@@ -210,6 +219,36 @@ begin
 end;
 $$;
 
+-- Finds the lowest positive integer NOT currently in use as a numeric
+-- suffix on the given prefix within the given table/column — i.e. true
+-- gap-filling ID allocation, not a strictly-incrementing counter. Per
+-- Prashant's explicit numbering rule: when B-2 is deleted, the next new
+-- borrower becomes B-2 again (any deleted number is immediately reusable,
+-- regardless of whether it ever had activity), not B-4. Used for borrowers
+-- (B-#), investors (I-#), and loan accounts (L-#).
+--
+-- Deliberately a simple "try 1, 2, 3... until free" loop rather than a
+-- clever set-based query — record counts here are small (a lending
+-- business's borrower/investor/loan lists), so a straightforward loop that
+-- is obviously correct beats a fast query that's hard to verify.
+-- p_table/p_column are trusted internal literals only (never
+-- user-supplied), passed from the three ID-generating functions below.
+create or replace function next_available_number(p_table text, p_column text, p_prefix text)
+returns integer language plpgsql as $$
+declare
+  candidate integer := 1;
+  exists_already boolean;
+begin
+  loop
+    execute format('select exists(select 1 from %I where %I = %L)', p_table, p_column, p_prefix || '-' || candidate)
+      into exists_already;
+    exit when not exists_already;
+    candidate := candidate + 1;
+  end loop;
+  return candidate;
+end;
+$$;
+
 create or replace function log_audit(p_action text, p_entity text, p_entity_id text, p_details jsonb)
 returns void language sql as $$
   insert into audit_log (id, action, entity, entity_id, details)
@@ -265,8 +304,8 @@ declare
   new_id text;
   rec investors%rowtype;
 begin
-  seq := next_counter('investor');
-  new_id := 'INVST' || lpad(seq::text, 2, '0');
+  seq := next_available_number('investors', 'id', 'I');
+  new_id := 'I-' || seq;
 
   insert into investors (id, name, father_name, address, mobile, email, photo, remarks, status)
   values (new_id, p->>'name', coalesce(p->>'fatherName',''), coalesce(p->>'address',''),
@@ -317,6 +356,13 @@ returns jsonb language plpgsql as $$
 declare
   deleted investors%rowtype;
 begin
+  -- Cascade-delete everything under this investor first. This matters more
+  -- than it did before: investor IDs (I-1, I-2...) are now reusable once
+  -- freed, so a deleted investor's accounts/transactions must be fully
+  -- gone, not just orphaned, or a brand-new investor later given the same
+  -- ID would appear to inherit someone else's financial history.
+  delete from transactions where investor_id = p->>'id';
+  delete from accounts where investor_id = p->>'id';
   delete from investors where id = p->>'id' returning * into deleted;
   if not found then return jsonb_build_object('error', 'Investor not found'); end if;
   perform log_audit('DELETE', 'Investor', p->>'id', to_jsonb(deleted));
@@ -333,8 +379,8 @@ declare
   new_id text;
   rec borrowers%rowtype;
 begin
-  seq := next_counter('borrower');
-  new_id := 'BRW' || lpad(seq::text, 2, '0');
+  seq := next_available_number('borrowers', 'id', 'B');
+  new_id := 'B-' || seq;
 
   insert into borrowers (id, name, father_name, address, mobile, email, photo, remarks, loan_amount, loan_date, "references", status)
   values (new_id, p->>'name', coalesce(p->>'fatherName',''), coalesce(p->>'address',''),
@@ -386,7 +432,16 @@ create or replace function delete_borrower(p jsonb)
 returns jsonb language plpgsql as $$
 declare
   deleted borrowers%rowtype;
+  la record;
 begin
+  -- Same reasoning as delete_investor: borrower IDs (B-1, B-2...) are now
+  -- reusable once freed, so every dependent record — each loan account,
+  -- its transactions, and its EMI schedule — must be fully removed first.
+  for la in select id from loan_accounts where borrower_id = p->>'id' loop
+    delete from loan_emi_schedule where loan_account_id = la.id;
+    delete from loan_transactions where loan_account_id = la.id;
+  end loop;
+  delete from loan_accounts where borrower_id = p->>'id';
   delete from borrowers where id = p->>'id' returning * into deleted;
   if not found then return jsonb_build_object('error', 'Borrower not found'); end if;
   perform log_audit('DELETE', 'Borrower', p->>'id', to_jsonb(deleted));
@@ -731,7 +786,6 @@ declare
   v_borrower borrowers%rowtype;
   v_loan loan_accounts%rowtype;
   v_txn loan_transactions%rowtype;
-  v_seq integer;
   v_loan_no text;
   v_account_type text;
   v_principal numeric;
@@ -739,23 +793,42 @@ declare
   v_tenure integer;
   v_emi numeric;
   v_receipt text;
+  v_sanctioned_limit numeric;
+  v_maturity_date date;
 begin
   select * into v_borrower from borrowers where id = p->>'borrowerId';
   if not found then return jsonb_build_object('error', 'Borrower not found'); end if;
 
   v_account_type := upper(coalesce(p->>'accountType', ''));
-  if v_account_type not in ('BULLET', 'EMI') then
-    return jsonb_build_object('error', 'Account type must be BULLET or EMI');
+  if v_account_type not in ('BULLET', 'EMI', 'OVERDRAFT') then
+    return jsonb_build_object('error', 'Account type must be BULLET, EMI, or OVERDRAFT');
   end if;
 
-  v_principal := (p->>'principal')::numeric;
   v_roi := (p->>'roi')::numeric;
-  if v_principal is null or v_principal <= 0 then
-    return jsonb_build_object('error', 'Principal must be greater than zero');
-  end if;
-
   v_emi := null;
   v_tenure := null;
+  v_sanctioned_limit := null;
+  v_maturity_date := null;
+
+  if v_account_type = 'OVERDRAFT' then
+    v_sanctioned_limit := (p->>'sanctionedLimit')::numeric;
+    if v_sanctioned_limit is null or v_sanctioned_limit <= 0 then
+      return jsonb_build_object('error', 'Sanctioned limit must be greater than zero for an Overdraft account');
+    end if;
+    -- The initial draw can be zero — an OD facility may be opened with
+    -- nothing drawn yet, unlike Bullet/EMI which always disburse the full
+    -- principal immediately.
+    v_principal := coalesce((p->>'principal')::numeric, 0);
+    if v_principal < 0 or v_principal > v_sanctioned_limit then
+      return jsonb_build_object('error', 'Initial draw cannot be negative or exceed the sanctioned limit');
+    end if;
+  else
+    v_principal := (p->>'principal')::numeric;
+    if v_principal is null or v_principal <= 0 then
+      return jsonb_build_object('error', 'Principal must be greater than zero');
+    end if;
+  end if;
+
   if v_account_type = 'EMI' then
     v_tenure := (p->>'tenureMonths')::integer;
     if v_tenure is null or v_tenure <= 0 then
@@ -764,33 +837,142 @@ begin
     v_emi := calc_emi_amount(v_principal, v_roi, v_tenure);
   end if;
 
-  select count(*) into v_seq from loan_accounts where borrower_id = p->>'borrowerId';
-  v_loan_no := (p->>'borrowerId') || '-L' || lpad((v_seq + 1)::text, 3, '0');
+  if v_account_type = 'BULLET' then
+    v_maturity_date := ((p->>'disbursementDate')::date + interval '12 months')::date;
+  end if;
+
+  v_loan_no := 'L-' || next_available_number('loan_accounts', 'loan_no', 'L');
 
   insert into loan_accounts (loan_no, borrower_id, account_type, principal, roi,
-    disbursement_date, tenure_months, emi_amount, status)
+    disbursement_date, tenure_months, emi_amount, status, sanctioned_limit, maturity_date)
   values (v_loan_no, p->>'borrowerId', v_account_type, v_principal, v_roi,
-    (p->>'disbursementDate')::date, v_tenure, v_emi, 'ACTIVE')
+    (p->>'disbursementDate')::date, v_tenure, v_emi, 'ACTIVE', v_sanctioned_limit, v_maturity_date)
   returning * into v_loan;
 
   if v_account_type = 'EMI' then
     perform generate_emi_schedule(v_loan.id);
   end if;
 
-  v_receipt := next_receipt_no();
-  insert into loan_transactions (loan_account_id, borrower_id, txn_date, txn_type, amount,
-    balance_before, interest_added, balance_after, remarks, receipt_no, payment_mode)
-  values (v_loan.id, p->>'borrowerId', (p->>'disbursementDate')::date, 'DISBURSEMENT', v_principal,
-    0, 0, v_principal, coalesce(p->>'remarks',''), v_receipt, coalesce(p->>'paymentMode',''))
-  returning * into v_txn;
+  -- Overdraft with a zero initial draw has nothing to disburse yet — skip
+  -- the transaction row entirely rather than record a meaningless Rs 0
+  -- disbursement.
+  if v_principal > 0 then
+    v_receipt := next_receipt_no();
+    insert into loan_transactions (loan_account_id, borrower_id, txn_date, txn_type, amount,
+      balance_before, interest_added, balance_after, remarks, receipt_no, payment_mode)
+    values (v_loan.id, p->>'borrowerId', (p->>'disbursementDate')::date, 'DISBURSEMENT', v_principal,
+      0, 0, v_principal, coalesce(p->>'remarks',''), v_receipt, coalesce(p->>'paymentMode',''))
+    returning * into v_txn;
+  end if;
 
   perform log_audit('CREATE', 'LoanAccount', v_loan.id::text, to_jsonb(v_loan));
   return jsonb_build_object('ok', true, 'loanAccount', to_jsonb(v_loan), 'transaction', to_jsonb(v_txn));
 end;
 $$;
 
--- Live outstanding balance for a BULLET loan account: same math as
--- compute_account_value, just borrower-owed instead of investor-owed.
+-- Records a normal repayment against a loan account (BULLET, EMI, or
+-- OVERDRAFT). This is deliberately NOT how a loan gets closed anymore —
+-- per the spec, Full Settlement is its own explicit action (see
+-- full_settlement below) with its own fine/penalty/waiver breakdown, not
+-- an automatic side effect of a repayment happening to zero the balance.
+-- A repayment that brings an EMI/Bullet loan to Rs 0 simply leaves it
+-- ACTIVE with nothing outstanding; an Overdraft at Rs 0 stays open and
+-- ready for further draws, exactly like a real bank OD facility.
+create or replace function repay_loan(p jsonb)
+returns jsonb language plpgsql as $$
+declare
+  la loan_accounts%rowtype;
+  v_val record;
+  v_amount numeric;
+  v_balance_after numeric;
+  v_txn loan_transactions%rowtype;
+  v_receipt text;
+  v_remaining numeric;
+  sched loan_emi_schedule%rowtype;
+begin
+  select * into la from loan_accounts where id = (p->>'loanAccountId')::uuid;
+  if not found then return jsonb_build_object('error', 'Loan account not found'); end if;
+  if la.status = 'CLOSED' then return jsonb_build_object('error', 'This loan is closed and cannot accept further repayment.'); end if;
+
+  select * into v_val from compute_loan_value(la.id, (p->>'date')::date);
+
+  v_amount := (p->>'amount')::numeric;
+  if v_amount <= 0 then return jsonb_build_object('error', 'Repayment amount must be greater than zero'); end if;
+  if v_amount > v_val.current_value + 0.01 then
+    return jsonb_build_object('error', 'Repayment amount exceeds outstanding balance (Rs. ' || round(v_val.current_value,2)::text || '). Use Full Settlement to close this loan instead.');
+  end if;
+
+  v_balance_after := round(v_val.current_value - v_amount, 2);
+  v_receipt := next_receipt_no();
+
+  insert into loan_transactions (loan_account_id, borrower_id, txn_date, txn_type, amount,
+    balance_before, interest_added, balance_after, remarks, receipt_no, payment_mode)
+  values (la.id, la.borrower_id, (p->>'date')::date, 'REPAYMENT',
+    v_amount, v_val.running_balance, v_val.accrued_interest, v_balance_after,
+    coalesce(p->>'remarks',''), v_receipt, coalesce(p->>'paymentMode',''))
+  returning * into v_txn;
+
+  if la.account_type = 'EMI' then
+    v_remaining := v_amount;
+    for sched in
+      select * from loan_emi_schedule
+      where loan_account_id = la.id and status in ('PENDING', 'OVERDUE')
+      order by installment_no asc
+    loop
+      exit when v_remaining < sched.emi_amount - 0.01;
+      update loan_emi_schedule set status = 'PAID', paid_txn_id = v_txn.id where id = sched.id;
+      v_remaining := v_remaining - sched.emi_amount;
+    end loop;
+  end if;
+
+  perform log_audit('REPAYMENT', 'LoanAccount', la.id::text, to_jsonb(v_txn));
+
+  return jsonb_build_object('ok', true, 'transaction', to_jsonb(v_txn));
+end;
+$$;
+
+-- Records a fresh draw on an Overdraft account, up to the sanctioned
+-- limit. Rejects the draw if it would push outstanding above the limit —
+-- the whole point of a sanctioned limit is that it can't be exceeded.
+create or replace function draw_on_overdraft(p jsonb)
+returns jsonb language plpgsql as $$
+declare
+  la loan_accounts%rowtype;
+  v_val record;
+  v_amount numeric;
+  v_receipt text;
+  v_txn loan_transactions%rowtype;
+begin
+  select * into la from loan_accounts where id = (p->>'loanAccountId')::uuid;
+  if not found then return jsonb_build_object('error', 'Loan account not found'); end if;
+  if la.account_type <> 'OVERDRAFT' then return jsonb_build_object('error', 'Draws only apply to Overdraft accounts'); end if;
+  if la.status = 'CLOSED' then return jsonb_build_object('error', 'This Overdraft account is closed.'); end if;
+
+  v_amount := (p->>'amount')::numeric;
+  if v_amount <= 0 then return jsonb_build_object('error', 'Draw amount must be greater than zero'); end if;
+
+  select * into v_val from compute_loan_value(la.id, (p->>'date')::date);
+  if v_val.current_value + v_amount > la.sanctioned_limit + 0.01 then
+    return jsonb_build_object('error', 'This draw would exceed the sanctioned limit of Rs. ' || round(la.sanctioned_limit,2)::text ||
+      ' (available: Rs. ' || round(greatest(la.sanctioned_limit - v_val.current_value, 0), 2)::text || ')');
+  end if;
+
+  v_receipt := next_receipt_no();
+  insert into loan_transactions (loan_account_id, borrower_id, txn_date, txn_type, amount,
+    balance_before, interest_added, balance_after, remarks, receipt_no, payment_mode)
+  values (la.id, la.borrower_id, (p->>'date')::date, 'DRAW', v_amount,
+    v_val.running_balance, v_val.accrued_interest, round(v_val.current_value + v_amount, 2),
+    coalesce(p->>'remarks',''), v_receipt, coalesce(p->>'paymentMode',''))
+  returning * into v_txn;
+
+  perform log_audit('DRAW', 'LoanAccount', la.id::text, to_jsonb(v_txn));
+  return jsonb_build_object('ok', true, 'transaction', to_jsonb(v_txn));
+end;
+$$;
+
+-- Live outstanding balance for a loan account (BULLET/OVERDRAFT: daily
+-- interest on the balance; EMI: no daily accrual, balance only moves via
+-- recorded transactions).
 create or replace function compute_loan_value(p_loan_account_id uuid, p_as_on date default current_date)
 returns table(running_balance numeric, last_event_date date, days_since_last_event integer,
               accrued_interest numeric, current_value numeric)
@@ -820,74 +1002,299 @@ begin
   end if;
 
   v_days := days_between(v_last_date, p_as_on);
-  v_interest := case when la.account_type = 'BULLET' then calc_interest(v_balance, la.roi, v_days) else 0 end;
+  v_interest := case when la.account_type in ('BULLET', 'OVERDRAFT') then calc_interest(v_balance, la.roi, v_days) else 0 end;
 
   return query select v_balance, v_last_date, v_days, v_interest, (v_balance + v_interest);
+end;
+$$;
+
+-- ---------- Centralized loan position engine ----------
+-- Single source of truth for everything overdue/fine/penalty/payable
+-- related. Every screen (Dashboard, Loan Profile, Reports, Statement PDF,
+-- Full Settlement) calls this rather than recalculating its own copy —
+-- per Prashant's explicit requirement that no screen may reimplement this
+-- math independently.
+--
+-- Returns different fields populated depending on account_type:
+--   BULLET:    principal_outstanding, interest_position, maturity_date,
+--              days_overdue, pre_closure_penalty, current_payable
+--   EMI:       principal_outstanding, emis_paid, emis_pending,
+--              emis_overdue, late_fine, next_emi_due_date,
+--              pre_closure_penalty, current_payable
+--   OVERDRAFT: principal_outstanding (amount actually drawn),
+--              interest_position, sanctioned_limit, available_limit,
+--              current_payable (no maturity/fine/penalty concept — a
+--              revolving facility, not a term loan)
+create or replace function calculate_loan_position(p jsonb)
+returns jsonb language plpgsql as $$
+declare
+  p_loan_account_id uuid := (p->>'loanAccountId')::uuid;
+  p_as_of date := coalesce((p->>'asOf')::date, current_date);
+  la loan_accounts%rowtype;
+  val record;
+  v_result jsonb;
+  v_emis_paid integer := 0;
+  v_emis_pending integer := 0;
+  v_emis_overdue integer := 0;
+  v_late_fine numeric := 0;
+  v_next_due date;
+  v_days_overdue integer := 0;
+  v_pre_closure_penalty numeric := 0;
+  sched loan_emi_schedule%rowtype;
+  v_oldest_overdue_due date;
+begin
+  select * into la from loan_accounts where id = p_loan_account_id;
+  if not found then return jsonb_build_object('error', 'Loan account not found'); end if;
+
+  select * into val from compute_loan_value(p_loan_account_id, p_as_of);
+
+  if la.status = 'CLOSED' then
+    -- A closed loan's position is frozen at zero — it can never accrue
+    -- further interest or fine, per the spec's explicit requirement.
+    return jsonb_build_object(
+      'accountType', la.account_type, 'status', 'CLOSED',
+      'principalOutstanding', 0, 'currentPayable', 0,
+      'closureDate', la.closure_date
+    );
+  end if;
+
+  if la.account_type = 'EMI' then
+    for sched in select * from loan_emi_schedule where loan_account_id = p_loan_account_id order by installment_no asc loop
+      if sched.status = 'PAID' then
+        v_emis_paid := v_emis_paid + 1;
+      elsif sched.due_date < p_as_of then
+        v_emis_overdue := v_emis_overdue + 1;
+        v_late_fine := v_late_fine + (days_between(sched.due_date, p_as_of) * 50);
+        if v_oldest_overdue_due is null or sched.due_date < v_oldest_overdue_due then
+          v_oldest_overdue_due := sched.due_date;
+        end if;
+      else
+        v_emis_pending := v_emis_pending + 1;
+        if v_next_due is null or sched.due_date < v_next_due then v_next_due := sched.due_date; end if;
+      end if;
+    end loop;
+    if v_oldest_overdue_due is not null then
+      v_days_overdue := days_between(v_oldest_overdue_due, p_as_of);
+    end if;
+    -- Pre-closure penalty applies to EMI too if closed before the
+    -- schedule's final due date (its "maturity").
+    if exists (select 1 from loan_emi_schedule where loan_account_id = p_loan_account_id and due_date > p_as_of) then
+      v_pre_closure_penalty := round(val.current_value * 0.03, 2);
+    end if;
+
+    v_result := jsonb_build_object(
+      'accountType', 'EMI', 'status', la.status,
+      'principalOutstanding', val.current_value,
+      'emisPaid', v_emis_paid, 'emisPending', v_emis_pending, 'emisOverdue', v_emis_overdue,
+      'lateFine', round(v_late_fine, 2), 'daysOverdue', v_days_overdue,
+      'nextEmiDueDate', v_next_due,
+      'preClosurePenalty', v_pre_closure_penalty,
+      'currentPayable', round(val.current_value + v_late_fine + v_pre_closure_penalty, 2)
+    );
+
+  elsif la.account_type = 'BULLET' then
+    if p_as_of < la.maturity_date then
+      v_pre_closure_penalty := round(val.running_balance * 0.03, 2);
+    end if;
+    if p_as_of > la.maturity_date then
+      v_days_overdue := days_between(la.maturity_date, p_as_of);
+    end if;
+    v_result := jsonb_build_object(
+      'accountType', 'BULLET', 'status', la.status,
+      'principalOutstanding', val.running_balance,
+      'interestPosition', val.accrued_interest,
+      'maturityDate', la.maturity_date,
+      'daysOverdue', v_days_overdue,
+      'preClosurePenalty', v_pre_closure_penalty,
+      'currentPayable', round(val.current_value + v_pre_closure_penalty, 2)
+    );
+
+  else -- OVERDRAFT
+    v_result := jsonb_build_object(
+      'accountType', 'OVERDRAFT', 'status', la.status,
+      'principalOutstanding', val.running_balance,
+      'interestPosition', val.accrued_interest,
+      'sanctionedLimit', la.sanctioned_limit,
+      'availableLimit', greatest(coalesce(la.sanctioned_limit,0) - val.running_balance, 0),
+      'currentPayable', val.current_value
+    );
+  end if;
+
+  return v_result;
 end;
 $$;
 
 -- Records a repayment against a loan account (BULLET or EMI). For EMI loans,
 -- also marks the oldest PENDING/OVERDUE schedule row(s) as PAID up to the
 -- amount received.
-create or replace function repay_loan(p jsonb)
+-- Capitalizes unpaid accumulated interest into principal for a Bullet loan
+-- that has passed its maturity date without being settled — a one-time
+-- event per Prashant's explicit requirement ("must never re-capitalize on
+-- refresh/reopen"). Idempotent via the capitalized_at guard: once set, this
+-- function is a no-op on any subsequent call for the same loan account.
+-- Records an INTEREST_CAPITALIZATION transaction so the event is visible
+-- in the transaction history, and logs it to the audit trail with the
+-- before/after principal values.
+create or replace function capitalize_bullet_interest(p_loan_account_id uuid, p_as_of date default current_date)
 returns jsonb language plpgsql as $$
 declare
   la loan_accounts%rowtype;
-  v_val record;
-  v_amount numeric;
-  v_balance_after numeric;
-  v_is_full boolean;
+  val record;
   v_txn loan_transactions%rowtype;
   v_receipt text;
-  v_remaining numeric;
-  sched loan_emi_schedule%rowtype;
+begin
+  select * into la from loan_accounts where id = p_loan_account_id;
+  if not found then return jsonb_build_object('error', 'Loan account not found'); end if;
+  if la.account_type <> 'BULLET' then return jsonb_build_object('error', 'Capitalization only applies to Bullet loans'); end if;
+  if la.status = 'CLOSED' then return jsonb_build_object('ok', true, 'skipped', 'Loan is closed'); end if;
+  if la.capitalized_at is not null then return jsonb_build_object('ok', true, 'skipped', 'Already capitalized'); end if;
+  if p_as_of < la.maturity_date then return jsonb_build_object('ok', true, 'skipped', 'Not yet at maturity'); end if;
+
+  select * into val from compute_loan_value(p_loan_account_id, la.maturity_date);
+  if val.accrued_interest <= 0 then
+    -- Nothing to capitalize (loan was already fully paid down by maturity),
+    -- but still mark capitalized_at so this check is skipped on future calls.
+    update loan_accounts set capitalized_at = now(),
+      capitalization_pre_amount = val.running_balance, capitalization_post_amount = val.running_balance
+      where id = p_loan_account_id;
+    return jsonb_build_object('ok', true, 'skipped', 'No accrued interest to capitalize');
+  end if;
+
+  v_receipt := next_receipt_no();
+  insert into loan_transactions (loan_account_id, borrower_id, txn_date, txn_type, amount,
+    balance_before, interest_added, balance_after, remarks, receipt_no)
+  values (la.id, la.borrower_id, la.maturity_date, 'INTEREST_CAPITALIZATION', val.accrued_interest,
+    val.running_balance, val.accrued_interest, val.running_balance + val.accrued_interest,
+    'Unpaid interest capitalized into principal at maturity', v_receipt)
+  returning * into v_txn;
+
+  update loan_accounts set
+    capitalized_at = now(),
+    capitalization_pre_amount = val.running_balance,
+    capitalization_post_amount = val.running_balance + val.accrued_interest
+    where id = p_loan_account_id;
+
+  perform log_audit('INTEREST_CAPITALIZATION', 'LoanAccount', p_loan_account_id::text,
+    jsonb_build_object('preAmount', val.running_balance, 'postAmount', val.running_balance + val.accrued_interest, 'maturityDate', la.maturity_date));
+
+  return jsonb_build_object('ok', true, 'transaction', to_jsonb(v_txn));
+end;
+$$;
+
+-- Sweeps all active Bullet loans past their maturity date and capitalizes
+-- each one that hasn't been capitalized yet. Safe to call on every data
+-- load (like refresh_overdue_status) since capitalize_bullet_interest is
+-- itself idempotent.
+create or replace function refresh_bullet_capitalization()
+returns void language plpgsql as $$
+declare
+  la record;
+begin
+  for la in
+    select id from loan_accounts
+    where account_type = 'BULLET' and status <> 'CLOSED'
+      and capitalized_at is null and maturity_date <= current_date
+  loop
+    perform capitalize_bullet_interest(la.id, current_date);
+  end loop;
+end;
+$$;
+
+-- Full Settlement: the ONE deliberate way a loan account gets closed, per
+-- the spec. Computes Final Payable = Principal Outstanding + Interest/EMI
+-- Dues + Late Fine + Pre-closure Penalty − Fine Waiver, using
+-- calculate_loan_position as the single source of truth for every term in
+-- that formula (never recalculated independently here). Records one
+-- authoritative FULL_SETTLEMENT transaction with the full breakdown
+-- stored in its remarks/audit entry, sets status to CLOSED and stamps
+-- closure_date, and is idempotent: calling it again on an already-CLOSED
+-- loan is a no-op rather than a duplicate financial event.
+--
+-- Fine waiver is optional and ADMIN-only (enforced by the caller passing
+-- p->>'waivedBy' only when the signed-in role is ADMIN — the database
+-- layer trusts the app's role check here, consistent with how the rest of
+-- this schema handles ADMIN/USER; see the Fund Management spec's note
+-- that a stronger DB-level authorization layer is recommended before
+-- heavier multi-user production use). A waiver never deletes or reduces
+-- the originally-computed fine figure — it is recorded alongside it.
+create or replace function full_settlement(p jsonb)
+returns jsonb language plpgsql as $$
+declare
+  la loan_accounts%rowtype;
+  pos jsonb;
+  v_principal numeric;
+  v_dues numeric;
+  v_fine numeric;
+  v_penalty numeric;
+  v_waiver numeric;
+  v_final_payable numeric;
+  v_txn loan_transactions%rowtype;
+  v_receipt text;
+  v_settle_date date;
 begin
   select * into la from loan_accounts where id = (p->>'loanAccountId')::uuid;
   if not found then return jsonb_build_object('error', 'Loan account not found'); end if;
-  if la.status = 'CLOSED' then return jsonb_build_object('error', 'Loan account is already closed'); end if;
-
-  select * into v_val from compute_loan_value(la.id, (p->>'date')::date);
-
-  v_amount := (p->>'amount')::numeric;
-  if v_amount <= 0 then return jsonb_build_object('error', 'Repayment amount must be greater than zero'); end if;
-  if v_amount > v_val.current_value + 0.01 then
-    return jsonb_build_object('error', 'Repayment amount exceeds outstanding balance (Rs. ' || round(v_val.current_value,2)::text || ')');
+  if la.status = 'CLOSED' then
+    return jsonb_build_object('ok', true, 'skipped', 'Loan is already closed', 'closureDate', la.closure_date);
   end if;
 
-  v_balance_after := v_val.current_value - v_amount;
-  v_is_full := coalesce((p->>'fullSettlement')::boolean, false) or v_balance_after < 0.01;
-  v_receipt := next_receipt_no();
+  v_settle_date := coalesce((p->>'date')::date, current_date);
 
+  -- Bullet loans past maturity must be capitalized first, so the
+  -- principal this settlement is based on already reflects that — same
+  -- ordering the dashboard/profile views rely on.
+  if la.account_type = 'BULLET' and la.capitalized_at is null and v_settle_date >= la.maturity_date then
+    perform capitalize_bullet_interest(la.id, v_settle_date);
+    select * into la from loan_accounts where id = la.id;
+  end if;
+
+  pos := calculate_loan_position(jsonb_build_object('loanAccountId', la.id, 'asOf', v_settle_date));
+  if pos ? 'error' then return pos; end if;
+
+  v_principal := coalesce((pos->>'principalOutstanding')::numeric, 0);
+  v_dues := coalesce((pos->>'interestPosition')::numeric, 0);
+  v_fine := coalesce((pos->>'lateFine')::numeric, 0);
+  v_penalty := coalesce((pos->>'preClosurePenalty')::numeric, 0);
+
+  v_waiver := 0;
+  if p->>'waivedBy' is not null and v_fine > 0 then
+    v_waiver := least(coalesce((p->>'waiveAmount')::numeric, v_fine), v_fine);
+  end if;
+
+  v_final_payable := round(v_principal + v_dues + v_fine + v_penalty - v_waiver, 2);
+
+  v_receipt := next_receipt_no();
   insert into loan_transactions (loan_account_id, borrower_id, txn_date, txn_type, amount,
     balance_before, interest_added, balance_after, remarks, receipt_no, payment_mode)
-  values (la.id, la.borrower_id, (p->>'date')::date,
-    case when v_is_full then 'FULL_SETTLEMENT' else 'REPAYMENT' end,
-    v_amount, v_val.running_balance, v_val.accrued_interest,
-    case when v_is_full then 0 else v_balance_after end, coalesce(p->>'remarks',''),
+  values (la.id, la.borrower_id, v_settle_date, 'FULL_SETTLEMENT', v_final_payable,
+    v_principal, v_dues, 0,
+    format('Full settlement: principal %s + dues %s + fine %s + penalty %s - waiver %s = %s',
+      v_principal, v_dues, v_fine, v_penalty, v_waiver, v_final_payable),
     v_receipt, coalesce(p->>'paymentMode',''))
   returning * into v_txn;
 
+  update loan_accounts set
+    status = 'CLOSED',
+    closure_date = v_settle_date,
+    fine_waived_amount = case when v_waiver > 0 then v_waiver else fine_waived_amount end,
+    fine_waived_by = case when v_waiver > 0 then p->>'waivedBy' else fine_waived_by end,
+    fine_waived_at = case when v_waiver > 0 then now() else fine_waived_at end
+    where id = la.id;
+
   if la.account_type = 'EMI' then
-    v_remaining := v_amount;
-    for sched in
-      select * from loan_emi_schedule
-      where loan_account_id = la.id and status in ('PENDING', 'OVERDUE')
-      order by installment_no asc
-    loop
-      exit when v_remaining < sched.emi_amount - 0.01;
-      update loan_emi_schedule set status = 'PAID', paid_txn_id = v_txn.id where id = sched.id;
-      v_remaining := v_remaining - sched.emi_amount;
-    end loop;
+    update loan_emi_schedule set status = 'PAID', paid_txn_id = v_txn.id
+      where loan_account_id = la.id and status in ('PENDING', 'OVERDUE');
   end if;
 
-  if v_is_full then
-    update loan_accounts set status = 'CLOSED' where id = la.id;
-  end if;
+  perform log_audit('FULL_SETTLEMENT', 'LoanAccount', la.id::text, jsonb_build_object(
+    'principal', v_principal, 'dues', v_dues, 'lateFine', v_fine, 'preClosurePenalty', v_penalty,
+    'waivedAmount', v_waiver, 'waivedBy', p->>'waivedBy', 'finalPayable', v_final_payable, 'closureDate', v_settle_date
+  ));
 
-  perform log_audit(case when v_is_full then 'FULL_SETTLEMENT' else 'REPAYMENT' end,
-    'LoanAccount', la.id::text, to_jsonb(v_txn));
-
-  return jsonb_build_object('ok', true, 'transaction', to_jsonb(v_txn), 'loanClosed', v_is_full);
+  return jsonb_build_object('ok', true, 'transaction', to_jsonb(v_txn), 'breakdown', jsonb_build_object(
+    'principalOutstanding', v_principal, 'interestOrDues', v_dues, 'lateFine', v_fine,
+    'preClosurePenalty', v_penalty, 'fineWaived', v_waiver, 'finalPayable', v_final_payable
+  ));
 end;
 $$;
 
@@ -907,6 +1314,102 @@ begin
 end;
 $$;
 
+-- Recomputes balance_after for every transaction on a loan account, in
+-- date order, and re-derives the account's status (ACTIVE/CLOSED) from
+-- whether the last transaction was a full settlement. Mirrors
+-- recalculate_account on the investor side. Needed whenever a loan
+-- transaction is deleted (an erroneously-recorded EMI payment, say) so
+-- every later balance stays correct instead of going stale.
+create or replace function recalculate_loan_account(p_loan_account_id uuid)
+returns jsonb language plpgsql as $$
+declare
+  la loan_accounts%rowtype;
+  t loan_transactions%rowtype;
+  v_balance numeric := 0;
+  v_final_status text := 'ACTIVE';
+  v_balance_before numeric;
+  v_balance_after numeric;
+  v_has_txns boolean := false;
+begin
+  select * into la from loan_accounts where id = p_loan_account_id;
+  if not found then return jsonb_build_object('error', 'Loan account not found for recalculation'); end if;
+
+  for t in
+    select * from loan_transactions where loan_account_id = p_loan_account_id
+    order by txn_date asc, created_at asc
+  loop
+    v_has_txns := true;
+    v_balance_before := v_balance;
+
+    if t.txn_type = 'DISBURSEMENT' then
+      v_balance_after := t.amount;
+      v_final_status := 'ACTIVE';
+    elsif t.txn_type = 'FULL_SETTLEMENT' then
+      v_balance_after := 0;
+      v_final_status := 'CLOSED';
+    else -- REPAYMENT
+      v_balance_after := v_balance_before - t.amount;
+      v_final_status := 'ACTIVE';
+    end if;
+
+    update loan_transactions set
+      balance_before = v_balance_before,
+      balance_after = v_balance_after
+    where id = t.id;
+
+    v_balance := v_balance_after;
+  end loop;
+
+  -- No transactions left at all (the disbursement itself was deleted,
+  -- which callers should prevent, but guard anyway) — leave status as-is
+  -- rather than guessing.
+  if v_has_txns then
+    -- Re-derive OVERDUE from the schedule rather than overwriting it, since
+    -- refresh_overdue_status() already owns that logic and runs on every
+    -- data load.
+    update loan_accounts set status = v_final_status
+      where id = p_loan_account_id and status <> 'OVERDUE';
+  end if;
+
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
+-- Deletes a single loan transaction (a wrongly-recorded EMI payment, for
+-- example), recalculates every later balance on that loan account, and —
+-- if the deleted transaction was the one that marked an EMI installment
+-- PAID — resets that installment back to PENDING so its number is free to
+-- be used again by the next real payment, per Prashant's numbering rule.
+-- Disbursement transactions cannot be deleted this way; delete the whole
+-- loan account instead if a loan was created in error.
+create or replace function delete_loan_transaction(p jsonb)
+returns jsonb language plpgsql as $$
+declare
+  deleted loan_transactions%rowtype;
+  recalc jsonb;
+begin
+  select * into deleted from loan_transactions where id = (p->>'id')::uuid;
+  if not found then return jsonb_build_object('error', 'Transaction not found'); end if;
+  if deleted.txn_type = 'DISBURSEMENT' then
+    return jsonb_build_object('error', 'The disbursement transaction cannot be deleted on its own — delete the whole loan account instead.');
+  end if;
+
+  -- Free up the EMI installment number this payment was covering, if any,
+  -- before deleting the transaction (the paid_txn_id FK would otherwise
+  -- dangle briefly, which is harmless but tidier to clear first).
+  update loan_emi_schedule set status = 'PENDING', paid_txn_id = null
+    where paid_txn_id = deleted.id;
+
+  delete from loan_transactions where id = (p->>'id')::uuid;
+
+  recalc := recalculate_loan_account(deleted.loan_account_id);
+  if recalc ? 'error' then return recalc; end if;
+
+  perform log_audit('DELETE', 'LoanTransaction', p->>'id', to_jsonb(deleted));
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
 create or replace function delete_loan_account(p jsonb)
 returns jsonb language plpgsql as $$
 begin
@@ -914,6 +1417,29 @@ begin
   delete from loan_transactions where loan_account_id = (p->>'loanAccountId')::uuid;
   delete from loan_accounts where id = (p->>'loanAccountId')::uuid;
   perform log_audit('DELETE', 'LoanAccount', p->>'loanAccountId', p);
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
+-- Quick-edit for a loan account from the compact list view. Deliberately
+-- narrow in scope: principal, account type, and tenure are NOT editable
+-- here because they're baked into the already-generated EMI schedule and
+-- disbursement transaction — changing them after the fact would silently
+-- desynchronize the schedule from reality. ROI and remarks are safe to
+-- edit inline since they don't retroactively invalidate anything already
+-- recorded.
+create or replace function edit_loan_account(p jsonb)
+returns jsonb language plpgsql as $$
+declare
+  rec loan_accounts%rowtype;
+begin
+  update loan_accounts set
+    roi = coalesce((p->>'roi')::numeric, roi)
+  where id = (p->>'id')::uuid
+  returning * into rec;
+
+  if not found then return jsonb_build_object('error', 'Loan account not found'); end if;
+  perform log_audit('EDIT', 'LoanAccount', p->>'id', p);
   return jsonb_build_object('ok', true);
 end;
 $$;
@@ -933,6 +1459,7 @@ declare
   v_as_on timestamptz := now();
 begin
   perform refresh_overdue_status();
+  perform refresh_bullet_capitalization();
 
   select coalesce(jsonb_agg(to_jsonb(i)), '[]'::jsonb) into v_investors from investors i;
   select coalesce(jsonb_agg(to_jsonb(b)), '[]'::jsonb) into v_borrowers from borrowers b;
