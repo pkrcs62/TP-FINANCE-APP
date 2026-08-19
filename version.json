@@ -1,5 +1,0 @@
-{
-  "version": "v1.38",
-  "updated": "2026-08-19",
-  "message": "Fund Management is now its own third mode (gold theme) in the login chooser, alongside Investor and Borrower — fixes the Funds screen not being properly mode-gated"
-}
