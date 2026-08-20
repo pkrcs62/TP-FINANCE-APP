@@ -1,5 +1,0 @@
-{
-  "version": "v1.40",
-  "updated": "2026-08-19",
-  "message": "Stateful EMI late-fine tracking (Rs 50/Rs 10,000 principal/day, partial pay + partial waiver, fresh instance per new overdue period), CLOSED_FINE_PENDING loan status, cross-loan fine blocking on new loan creation, manual pool balance adjustment, pool business-balance pie chart, short-form borrower/investor IDs for new records, OD-specific loan agreement clause, auto-fire agreement on loan creation, receipt signatory fix (Pooja Chauhan), Recent Activity removed from dashboard"
-}
