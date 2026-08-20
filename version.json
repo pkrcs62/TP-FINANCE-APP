@@ -1,0 +1,5 @@
+{
+  "version": "v1.45",
+  "updated": "2026-08-21",
+  "message": "Fixed the real cause of Loan Book still showing in Investor/Funds mode: renderDashboard() only ever set it visible in the Borrower branch, but nothing ever hid it again when switching to a different mode mid-session (Investor's branch, and Funds mode's separate render path, never touched that element at all). Now reset unconditionally on every render before branching."
+}
