@@ -1,0 +1,5 @@
+{
+  "version": "v1.42",
+  "updated": "2026-08-20",
+  "message": "USER login disabled (ADMIN-only for now; USER logic kept in code, unreachable, for a future redesign). Bullet loans' Expected Interest This Month now only counts loans actually maturing that month (real accrued interest at maturity), instead of projecting every active Bullet loan every month."
+}
