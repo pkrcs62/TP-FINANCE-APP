@@ -1,0 +1,5 @@
+{
+  "version": "v1.44",
+  "updated": "2026-08-20",
+  "message": "New Loan and New Investment forms now open a proper pool-selection modal (table: Pool / Available Balance / Amount / Remaining After, updates live as you type) instead of the inline picker. Fixed a real bug found while building this: if two forms on the page each create their own allocation picker, the one created first could silently steal the shared modal's Save button from the one opened later -- now rebinds correctly to whichever was actually opened."
+}
