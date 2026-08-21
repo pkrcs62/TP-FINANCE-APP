@@ -1,5 +1,0 @@
-{
-  "version": "v1.47",
-  "updated": "2026-08-21",
-  "message": "New Bank Loans module inside Fund Management: loans FROM banks to the business (Bullet/EMI reuse the existing loan engine; a new real bank-style Overdraft with sanctioned limit, multiple draws/repayments, daily interest, and a per-account monthly billing day). Disbursement and repayment both flow through the pool allocation modal. Bank interest paid can optionally, manually, deduct from a chosen pool's profit balance in real time. Fund Management's Pool Accounts and Bank Loans are now both CRED-style icon tiles on one compact landing screen."
-}
