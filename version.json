@@ -1,0 +1,5 @@
+{
+  "version": "v1.48",
+  "updated": "2026-08-21",
+  "message": "Fixed both pool-allocation-modal not-opening bugs (different root causes: investor side had a silent-failure race, bank loan side had a stacking-listener bug). Pool allocation now warns and hard-blocks in real time when an OUT-direction amount exceeds available balance (correctly NOT applied to IN-direction money like bank loan disbursement or investor money). Bank field is now a type-ahead with fuzzy matching plus common Indian bank abbreviation expansion. Recent Activity is day-grouped with a calm Instagram-style fade-in. New Stories-style urgent-items strip on the dashboard. Hardware/browser back button now navigates screen-by-screen instead of exiting the app."
+}
