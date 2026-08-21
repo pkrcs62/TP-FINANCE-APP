@@ -1,0 +1,5 @@
+{
+  "version": "v1.49",
+  "updated": "2026-08-21",
+  "message": "Investor and Borrower lists redesigned as an Instagram-style profile grid (avatar + name, tap to open full detail) instead of long stacked rows -- preserved all existing edit/delete capability by confirming it already lives on each profile screen. Fixed the pool allocation modal's 'Remaining After' figure to correctly ADD for money coming in (investor investment, bank loan disbursement) instead of always subtracting. Fixed the real cause of the leading-zero typing bug: the whole table was rebuilding on every keystroke, resetting the input's cursor to position 0 each time -- now only the other rows and totals patch live, the field you're typing into is left untouched."
+}
