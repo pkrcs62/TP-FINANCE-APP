@@ -1,5 +1,0 @@
-{
-  "version": "v1.51",
-  "updated": "2026-08-22",
-  "message": "Settings tab hidden entirely (nav, mode-gating) to prevent any accidental DB connection changes. Investor profile was genuinely missing a way to generate its loan agreement -- fixed, now reachable via a new GPay/PhonePe-style icon row (Ledger / Agreement / Agreement Hindi). Same icon-row treatment added to the Borrower loan profile (Ledger / Agreement / Receipts)."
-}
