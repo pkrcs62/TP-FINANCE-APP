@@ -1,0 +1,5 @@
+{
+  "version": "v1.52",
+  "updated": "2026-08-23",
+  "message": "New Transfer action on the Profit Balance hero card: move an amount between a pool's Profit Balance and Business Balance, in either direction, as one atomic step (single date/reason, both balances update together). Also fixes a bug where profit-balance manual adjustments were leaking into the pool ledger's business-balance running total -- requires running 24_profit_business_transfer.sql."
+}
