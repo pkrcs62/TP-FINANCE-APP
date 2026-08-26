@@ -1,5 +1,0 @@
-{
-  "version": "v1.56",
-  "updated": "2026-08-27",
-  "message": "Added Recurring Investment Plan module (Investor mode -> Recurring tab): monthly-contribution plans on one reused account, 12-month cycles, Process Due confirmation, Year-End Pay/Reinvest interest actions. No changes to loan, EMI, Bullet, Overdraft, or existing one-time investor logic."
-}
