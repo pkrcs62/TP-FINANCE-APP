@@ -1,5 +1,0 @@
-{
-  "version": "v1.55",
-  "updated": "2026-08-26",
-  "message": "EMI collection dates now use fixed 10th/20th/30th schedules with date-card filtering; existing EMI schedules retain their historical dates; Overdraft interest collection day is fixed at the 20th."
-}
