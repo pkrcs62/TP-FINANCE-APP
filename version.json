@@ -1,5 +1,0 @@
-{
-  "version": "v1.54",
-  "updated": "2026-08-24",
-  "message": "Total Disbursed drill-down now matches the bordered table style used elsewhere (Overdue Loans), and drops the loan number column -- Borrower, Type, Principal, Disbursed, Status. Tap any row to open that loan's profile."
-}
