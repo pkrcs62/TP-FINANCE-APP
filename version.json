@@ -1,0 +1,5 @@
+{
+  "version": "v1.57",
+  "updated": "2026-08-27",
+  "message": "Replaced blurry app icon/logo with a cleaned, sharpened version across icon-192, icon-512, icon-maskable-512, and apple-touch-icon. In-app logo marks (login screen, mode chooser, header) all reference icon-192.png so they update automatically. Also added the Recurring Investment Plan module (Investor mode -> Recurring tab) via 02_recurring_investment.sql: monthly-contribution plans on one reused account, 12-month cycles, Process Due confirmation, Year-End Pay/Reinvest interest actions. No changes to loan, EMI, Bullet, Overdraft, or existing one-time investor logic."
+}
