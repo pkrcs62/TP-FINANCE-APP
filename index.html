@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FinSphere v2.25 &mdash; Borrow • Invest • Grow</title>
+<title>FinSphere v2.26 &mdash; Borrow • Invest • Grow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Poppins:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
@@ -4693,7 +4693,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'v2.25';
+const APP_VERSION = 'v2.26';
 
 // ---- Investor Mode Hindi/English toggle ----
 // Investor and account NAMES are data the user entered and are never
@@ -4734,7 +4734,7 @@ const HI = {
   'CLOSED': 'बंद',
   'Total Running Balance': 'कुल चालू शेष',
   'Total Accrued Interest': 'कुल अर्जित ब्याज',
-  'Total Value (Principal + Interest)': 'कुल मूल्य (मूलधन + ब्याज)',
+  'Current Investment Value': 'वर्तमान निवेश मूल्य',
   'Total Current Value': 'कुल वर्तमान मूल्य',
   'Investment Accounts': 'निवेश खाते',
   'Combined Ledger': 'संयुक्त लेजर',
@@ -8463,7 +8463,7 @@ function renderDashboard(){
       [t('Active Investors'), activeInvestors.length, false, 'active-investors'],
       [t('Total Amount Invested'), fmtMoneyWhole(totalPrincipal), false, 'amount-invested'],
       [t('Total Accrued Interest'), fmtMoneyWhole(totalAccrued), false, 'accrued-interest'],
-      [t('Total Value (Principal + Interest)'), fmtMoneyWhole(totalPrincipal + totalAccrued), false, 'total-value'],
+      [t('Current Investment Value'), fmtMoneyWhole(totalPrincipal + totalAccrued), false, 'total-value'],
       [t('Investors with No Investment'), investorsWithoutAccount, investorsWithoutAccount>0, 'no-investment']
     ];
     document.getElementById('dashMetrics').innerHTML = investorChips.map(([label,value,isNeg,drillKey])=>
@@ -9253,6 +9253,125 @@ document.getElementById('btnEmiDueReportExport').addEventListener('click', ()=>{
 // the specific loans/borrowers behind that number, per current UX
 // standards for dashboard KPIs (a summary figure should let you get to
 // the underlying records in one tap, not just restate the total).
+function renderInvestmentValueDrillDown(bodyEl, data, valueKind){
+  // Shared by the Amount Invested / Interest Accrued / Current Value
+  // chips — same filter-by-type card list each time, differing only in
+  // which single number is pulled out per account. Never mixes in the
+  // other two numbers, per the agreed "extract just the one value"
+  // design for each of these three views.
+  const rowsWithType = data.activeAccounts.map(a=>{
+    const inv = data.activeInvestors.find(i=> i.id === a.investorId);
+    const rp = state.recurringPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
+    const fp = state.fdPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
+    let type = 'ONE_TIME', typeLabel = 'One Time', detail = '—';
+    if (rp){ type='RECURRING'; typeLabel='Regular Monthly'; detail = `₹${Number(rp.monthlyAmount).toLocaleString('en-IN')}/mo · due ${rp.contributionDay}${ordinalSuffix(rp.contributionDay)}`; }
+    else if (fp && fp.planType==='MONTHLY_PAYOUT'){ type='MONTHLY_PAYOUT'; typeLabel='Monthly Payout'; detail = `₹${Number(fp.nextPayoutAmount||0).toLocaleString('en-IN',{maximumFractionDigits:0})}/mo · due ${fp.payoutDay}${ordinalSuffix(fp.payoutDay)}`; }
+    else if (fp && fp.planType==='MATURITY_PAYOUT'){ type='MATURITY_PAYOUT'; typeLabel='At Maturity'; detail = `matures ${fmtDate(fp.maturityDate)}`; }
+    const principal = Number(a.runningBalance||0);
+    const interest = Number(a.accruedInterest||0);
+    const value = valueKind==='principal' ? principal : valueKind==='interest' ? interest : principal + interest;
+    return { a, inv, type, typeLabel, detail, value };
+  });
+
+  const typeCounts = { ALL: rowsWithType.length };
+  ['ONE_TIME','RECURRING','MONTHLY_PAYOUT','MATURITY_PAYOUT'].forEach(k=>{
+    typeCounts[k] = rowsWithType.filter(r=> r.type===k).length;
+  });
+  const chipDefs = [
+    ['ALL','All'], ['ONE_TIME','One Time'], ['RECURRING','Regular Monthly'],
+    ['MONTHLY_PAYOUT','Monthly Payout'], ['MATURITY_PAYOUT','At Maturity']
+  ];
+  const typeColor = { ONE_TIME: 'var(--muted)', RECURRING: 'var(--accent-pool-1,#2563eb)', MONTHLY_PAYOUT: '#7c3aed', MATURITY_PAYOUT: '#7c3aed' };
+
+  const renderFiltered = (filter)=>{
+    const filtered = filter==='ALL' ? rowsWithType : rowsWithType.filter(r=> r.type===filter);
+    if (!filtered.length) return '<div class="empty-state">Nothing to show.</div>';
+    return `<div class="investment-type-list">` + filtered.map(r=> `
+      <div class="investment-type-row">
+        <span class="investment-type-tag" style="background:${typeColor[r.type]};">${r.typeLabel}</span>
+        <span class="investment-type-name" data-drill-investor-id="${r.a.investorId}">${escapeHtml(r.inv ? r.inv.name : '(unknown)')}</span>
+        <span class="investment-type-principal">${fmtMoneyWhole(r.value)}</span>
+        <span class="investment-type-detail">${r.detail}</span>
+      </div>`).join('') + `</div>`;
+  };
+
+  let currentFilter = 'ALL';
+  bodyEl.innerHTML = `
+    <div class="filter-pill-row" id="investmentTypeFilter">
+      ${chipDefs.map(([k,label])=> `<button type="button" class="filter-pill investment-type-filter-btn${k==='ALL'?' active':''}" data-filter="${k}">${label} (${typeCounts[k]})</button>`).join('')}
+    </div>
+    <div id="investmentTypeTableWrap">${renderFiltered('ALL')}</div>
+    <div class="btn-row" style="margin-top:.8rem;">
+      <button type="button" class="btn secondary small" id="btnInvestmentValueExport">Download</button>
+    </div>
+  `;
+  const wireRowClicks = (wrap)=> wrap.querySelectorAll('[data-drill-investor-id]').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      document.getElementById('drillDownModal').classList.remove('show');
+      showScreen('investor-profile');
+      openInvestorProfile(row.dataset.drillInvestorId);
+    });
+  });
+  wireRowClicks(bodyEl);
+  bodyEl.querySelectorAll('.investment-type-filter-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      bodyEl.querySelectorAll('.investment-type-filter-btn').forEach(b=> b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      const wrap = document.getElementById('investmentTypeTableWrap');
+      wrap.innerHTML = renderFiltered(currentFilter);
+      wireRowClicks(wrap);
+    });
+  });
+
+  document.getElementById('btnInvestmentValueExport').addEventListener('click', ()=>{
+    const filtered = currentFilter==='ALL' ? rowsWithType : rowsWithType.filter(r=> r.type===currentFilter);
+    if (!filtered.length){ toast('Nothing to export.', true); return; }
+    const valueLabel = valueKind==='principal' ? 'Amount Invested' : valueKind==='interest' ? 'Interest Accrued' : 'Current Value';
+    const fileBase = valueLabel.replace(/\s+/g,'-');
+    askExportFormat((format)=>{
+      if (format === 'pdf'){
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        doc.setFont('helvetica','bold'); doc.setFontSize(16);
+        doc.text(`T.P. Finance — ${valueLabel}`, 40, 44);
+        doc.setFont('helvetica','normal'); doc.setFontSize(10);
+        doc.text(`Generated ${fmtDate(todayISO())}`, 40, 62);
+        doc.autoTable({
+          startY: 82,
+          head: [['Investor', 'Type', valueLabel, 'Detail']],
+          body: filtered.map(r=> [r.inv ? r.inv.name : '(unknown)', r.typeLabel, fmtMoneyWhole(r.value), r.detail]),
+          theme: 'grid', styles: { lineColor: [0,0,0], lineWidth: 0.5 }
+        });
+        doc.save(`${fileBase}_${todayISO()}.pdf`);
+      } else {
+        const sheetRows = filtered.map(r=> ({
+          'Investor': r.inv ? r.inv.name : '(unknown)',
+          'Type': r.typeLabel,
+          [valueLabel]: Number(r.value),
+          'Detail': r.detail
+        }));
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(sheetRows);
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        const thinBorder = { style: 'thin', color: { rgb: '000000' } };
+        for (let R = range.s.r; R <= range.e.r; R++){
+          for (let C = range.s.c; C <= range.e.c; C++){
+            const addr = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[addr]) continue;
+            ws[addr].s = ws[addr].s || {};
+            ws[addr].s.border = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+            if (R === 0){ ws[addr].s.font = { bold: true }; ws[addr].s.alignment = { horizontal: 'center' }; }
+          }
+        }
+        ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+        XLSX.utils.book_append_sheet(wb, ws, valueLabel.slice(0,31));
+        XLSX.writeFile(wb, `${fileBase}_${todayISO()}.xlsx`);
+      }
+    });
+  });
+}
+
 function openInvestorDrillDownModal(key, data){
   const titleEl = document.getElementById('drillDownModalTitle');
   const bodyEl = document.getElementById('drillDownModalBody');
@@ -9275,86 +9394,17 @@ function openInvestorDrillDownModal(key, data){
       </tr>`;
     });
   } else if (key === 'amount-invested'){
-    titleEl.textContent = 'All Investments';
-    // Every account, tagged with its actual investment type (plain /
-    // Regular Monthly / Monthly Interest Payout / Payout at Maturity)
-    // so it can be filtered like the loan-type chips elsewhere in the
-    // app, instead of a flat undifferentiated list of every account.
-    const rowsWithType = data.activeAccounts.map(a=>{
-      const inv = data.activeInvestors.find(i=> i.id === a.investorId);
-      const rp = state.recurringPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
-      const fp = state.fdPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
-      let type = 'ONE_TIME', typeLabel = 'One Time', detail = '—';
-      if (rp){ type='RECURRING'; typeLabel='Regular Monthly'; detail = `₹${Number(rp.monthlyAmount).toLocaleString('en-IN')}/mo · due ${rp.contributionDay}${ordinalSuffix(rp.contributionDay)}`; }
-      else if (fp && fp.planType==='MONTHLY_PAYOUT'){ type='MONTHLY_PAYOUT'; typeLabel='Monthly Payout'; detail = `₹${Number(fp.nextPayoutAmount||0).toLocaleString('en-IN',{maximumFractionDigits:0})}/mo · due ${fp.payoutDay}${ordinalSuffix(fp.payoutDay)}`; }
-      else if (fp && fp.planType==='MATURITY_PAYOUT'){ type='MATURITY_PAYOUT'; typeLabel='At Maturity'; detail = `matures ${fmtDate(fp.maturityDate)}`; }
-      return { a, inv, type, typeLabel, detail };
-    });
-
-    const typeCounts = { ALL: rowsWithType.length };
-    ['ONE_TIME','RECURRING','MONTHLY_PAYOUT','MATURITY_PAYOUT'].forEach(k=>{
-      typeCounts[k] = rowsWithType.filter(r=> r.type===k).length;
-    });
-    const chipDefs = [
-      ['ALL','All'], ['ONE_TIME','One Time'], ['RECURRING','Regular Monthly'],
-      ['MONTHLY_PAYOUT','Monthly Payout'], ['MATURITY_PAYOUT','At Maturity']
-    ];
-
-    const renderFilteredTable = (filter)=>{
-      const filtered = filter==='ALL' ? rowsWithType : rowsWithType.filter(r=> r.type===filter);
-      if (!filtered.length) return '<div class="empty-state">Nothing to show.</div>';
-      // Compact list, Type leading each row (not a wide table column) —
-      // account numbers are internal bookkeeping and add no value here,
-      // so they're dropped entirely from this view.
-      const typeColor = { ONE_TIME: 'var(--muted)', RECURRING: 'var(--accent-pool-1,#2563eb)', MONTHLY_PAYOUT: '#7c3aed', MATURITY_PAYOUT: '#7c3aed' };
-      return `<div class="investment-type-list">` + filtered.map(r=> `
-        <div class="investment-type-row">
-          <span class="investment-type-tag" style="background:${typeColor[r.type]};">${r.typeLabel}</span>
-          <span class="investment-type-name" data-drill-investor-id="${r.a.investorId}">${escapeHtml(r.inv ? r.inv.name : '(unknown)')}</span>
-          <span class="investment-type-principal">${fmtMoneyWhole(r.a.runningBalance)}</span>
-          <span class="investment-type-detail">${r.detail}</span>
-        </div>`).join('') + `</div>`;
-    };
-
-    bodyEl.innerHTML = `
-      <div class="filter-pill-row" id="investmentTypeFilter">
-        ${chipDefs.map(([k,label])=> `<button type="button" class="filter-pill investment-type-filter-btn${k==='ALL'?' active':''}" data-filter="${k}">${label} (${typeCounts[k]})</button>`).join('')}
-      </div>
-      <div id="investmentTypeTableWrap">${renderFilteredTable('ALL')}</div>
-    `;
-    bodyEl.querySelectorAll('.investment-type-filter-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        bodyEl.querySelectorAll('.investment-type-filter-btn').forEach(b=> b.classList.remove('active'));
-        btn.classList.add('active');
-        const wrap = document.getElementById('investmentTypeTableWrap');
-        wrap.innerHTML = renderFilteredTable(btn.dataset.filter);
-        wrap.querySelectorAll('[data-drill-investor-id]').forEach(row=>{
-          row.addEventListener('click', ()=>{
-            document.getElementById('drillDownModal').classList.remove('show');
-            showScreen('investor-profile');
-            openInvestorProfile(row.dataset.drillInvestorId);
-          });
-        });
-      });
-    });
+    titleEl.textContent = 'Amount Invested';
+    renderInvestmentValueDrillDown(bodyEl, data, 'principal');
+    return;
   } else if (key === 'accrued-interest'){
-    titleEl.textContent = 'Total Accrued Interest';
-    const withInterest = data.activeAccounts.filter(a=> Number(a.accruedInterest||0) > 0);
-    bodyEl.innerHTML = tableHtml(withInterest, ['Investor', 'Date Invested', 'Amount', 'ROI', 'Accrued Interest'], a=>{
-      const inv = data.activeInvestors.find(i=> i.id === a.investorId);
-      return `<tr class="drill-table-row" data-drill-investor-id="${a.investorId}">
-        <td>${escapeHtml(inv ? inv.name : '(unknown)')}</td><td>${fmtDate(a.openingDate)}</td><td>${fmtMoneyWhole(a.runningBalance)}</td><td>${Number(a.roi).toFixed(2)}%</td><td>${fmtMoneyWhole(a.accruedInterest)}</td>
-      </tr>`;
-    });
+    titleEl.textContent = 'Interest Accrued';
+    renderInvestmentValueDrillDown(bodyEl, data, 'interest');
+    return;
   } else if (key === 'total-value'){
-    titleEl.textContent = 'Total Value (Principal + Interest)';
-    bodyEl.innerHTML = tableHtml(data.activeAccounts, ['Investor', 'Principal', 'Interest', 'Total Value'], a=>{
-      const inv = data.activeInvestors.find(i=> i.id === a.investorId);
-      const total = Number(a.runningBalance||0) + Number(a.accruedInterest||0);
-      return `<tr class="drill-table-row" data-drill-investor-id="${a.investorId}">
-        <td>${escapeHtml(inv ? inv.name : '(unknown)')}</td><td>${fmtMoneyWhole(a.runningBalance)}</td><td>${fmtMoneyWhole(a.accruedInterest)}</td><td>${fmtMoneyWhole(total)}</td>
-      </tr>`;
-    });
+    titleEl.textContent = 'Current Investment Value';
+    renderInvestmentValueDrillDown(bodyEl, data, 'total');
+    return;
   } else if (key === 'no-investment'){
     titleEl.textContent = 'Investors with No Investment';
     bodyEl.innerHTML = tableHtml(data.investorsWithoutAccount, ['Name', 'Mobile', 'Status'], inv=> `
