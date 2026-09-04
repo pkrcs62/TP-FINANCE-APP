@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FinSphere v2.31 &mdash; Borrow • Invest • Grow</title>
+<title>FinSphere v2.37 &mdash; Borrow • Invest • Grow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Poppins:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
@@ -92,15 +92,15 @@
   h1,h2,h3,.brand-stack,.mode-tile .tile-title,.metric .value{font-family:var(--serif);letter-spacing:-.01em;}
 
   body.mode-investor{
-    --bg:#eef1f5;
+    --bg:#e4e9f0;
     --bg-elev:#ffffff;
     --panel:#ffffff;
-    --panel-hi:#f8f9fa;
-    --border:#dfe3e8;
-    --border-hi:#c7ccd3;
-    --ink:#16181c;
-    --muted:#495057;
-    --muted-dim:#5f6670;
+    --panel-hi:#f4f6f9;
+    --border:#d3dae4;
+    --border-hi:#b7c1cf;
+    --ink:#0f1419;
+    --muted:#44505c;
+    --muted-dim:#5c6773;
     --mint:#1a73e8;
     --mint-deep:#1557b0;
     --mint-glow:rgba(26,115,232,.10);
@@ -601,10 +601,11 @@
   .fund-hero-expand{max-height:0;overflow:hidden;transition:max-height .25s ease-out;}
   .fund-hero[aria-expanded="true"] .fund-hero-expand{max-height:900px;margin-top:1rem;}
 
-  .chip-scroll{display:grid;grid-template-columns:repeat(2, 1fr);gap:.55rem;padding:.15rem .05rem .5rem;margin-bottom:.3rem;}
+  .chip-scroll{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:.55rem;padding:.15rem .05rem .5rem;margin-bottom:.3rem;}
   .metric-chip{
     background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);
     padding:.65rem .85rem;transition:border-color .2s, box-shadow .2s, transform .2s;
+    overflow:hidden;min-width:0;
   }
   body.mode-investor .metric-chip{
     box-shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
@@ -614,8 +615,12 @@
     box-shadow:0 2px 6px rgba(16,24,40,.08), 0 4px 12px rgba(16,24,40,.06);
     transform:translateY(-1px);
   }
-  .metric-chip .label{font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-dim);font-weight:600;white-space:nowrap;margin-bottom:.25rem;}
-  .metric-chip .value{font-family:var(--mono);font-size:1.02rem;font-weight:700;color:var(--ink);}
+  /* Longer labels ("TOTAL AMOUNT INVESTED", "CURRENT INVESTMENT
+     VALUE") were forced onto one line and clipped by the screen edge
+     on narrow phones — wrapping to two lines here keeps every chip
+     fully inside its own card instead of overflowing it. */
+  .metric-chip .label{font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-dim);font-weight:600;white-space:normal;line-height:1.3;margin-bottom:.3rem;}
+  .metric-chip .value{font-family:var(--mono);font-size:1.02rem;font-weight:700;color:var(--ink);overflow-wrap:break-word;}
   body.mode-investor .metric-chip .value{color:var(--mint-deep);}
   .metric-chip .value.neg{color:var(--red);}
   .metric-chip .value.zero{color:var(--muted-dim);font-weight:500;}
@@ -681,6 +686,13 @@
   .subtab-tile.active .icon-tile-circle{border-color:var(--mint);border-width:2px;background:var(--mint-glow);}
   .subtab-tile.active .icon-tile-label{color:var(--mint);font-weight:700;}
   .icon-tile .icon-tile-label{font-size:.74rem;font-weight:600;color:var(--muted);text-align:center;line-height:1.25;}
+  /* Investor Profile's action row: 8 icons at full size took 3 rows
+     and pushed real content below the fold. Same icons, same IDs, just
+     packed 4-per-row at a smaller size so it fits in 2 rows instead. */
+  .profile-action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem .4rem;flex-wrap:unset;}
+  .profile-action-grid .icon-tile{width:auto;gap:.25rem;}
+  .profile-action-grid .icon-tile-circle{width:44px;height:44px;border-radius:12px;font-size:1.15rem;margin:0 auto;}
+  .profile-action-grid .icon-tile-label{font-size:.66rem;line-height:1.15;}
   .icon-tile-circle.accent-pool-1-text{border-color:var(--mint);color:var(--mint);}
   .icon-tile-circle.accent-pool-2-text{border-color:var(--violet);color:var(--violet);}
   .icon-tile-circle.accent-pool-3-text{border-color:var(--amber);color:var(--amber);}
@@ -2420,16 +2432,12 @@
       </button>
     </div>
 
-    <!-- New Investment: One Time vs Monthly choice -->
+    <!-- New Investment: Regular Monthly vs FD-style choice -->
     <div class="modal-overlay" id="newInvestmentChoiceModal">
       <div class="modal">
         <h3 data-i18n="New Investment">New Investment</h3>
         <p class="sub" style="margin:0 0 1rem;" data-i18n="What type of investment is this?">What type of investment is this?</p>
         <div class="icon-tile-row">
-          <button type="button" class="icon-tile" id="btnPickOneTime">
-            <span class="icon-tile-circle">⬇️</span>
-            <span class="icon-tile-label" data-i18n="One Time Investment">One Time Investment</span>
-          </button>
           <button type="button" class="icon-tile" id="btnPickMonthly">
             <span class="icon-tile-circle">🔁</span>
             <span class="icon-tile-label" data-i18n="Regular Monthly Investment">Regular Monthly Investment</span>
@@ -2440,7 +2448,7 @@
           </button>
           <button type="button" class="icon-tile" id="btnPickMaturityPayout">
             <span class="icon-tile-circle">🏁</span>
-            <span class="icon-tile-label" data-i18n="Payout at Maturity">Payout at Maturity</span>
+            <span class="icon-tile-label" data-i18n="Pay At Maturity">Pay At Maturity</span>
           </button>
         </div>
         <div class="modal-actions" style="margin-top:1rem;">
@@ -2654,7 +2662,7 @@
           <div class="meta" id="profMeta"></div>
         </div>
       </div>
-      <div class="icon-tile-row" style="margin-top:1rem;">
+      <div class="icon-tile-row profile-action-grid" style="margin-top:1rem;">
         <button type="button" class="icon-tile" id="btnEditInvestor">
           <span class="icon-tile-circle">✎</span>
           <span class="icon-tile-label" data-i18n="Edit">Edit</span>
@@ -3532,6 +3540,50 @@
     <div class="modal-close-row">
       <button class="btn secondary" id="btnFdMaturityCancel">Cancel</button>
       <button class="btn" id="btnFdMaturitySave">Confirm Payout</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shown when a Pay At Maturity plan has actually reached its
+     maturity date — offers the genuine fork: pay out and close (same
+     as closing early), or reinvest the full matured value into a
+     fresh cycle with a new maturity date. -->
+<div class="modal-overlay" id="fdMaturityChoiceModal">
+  <div class="modal">
+    <h3>Plan Matured</h3>
+    <p class="sub" id="fdMaturityChoicePlanLabel" style="margin:0 0 1rem;"></p>
+    <div class="metrics">
+      <div class="metric"><div class="label">Matured Value</div><div class="value" id="fdMaturityChoiceValue">—</div></div>
+    </div>
+    <div class="icon-tile-row">
+      <button type="button" class="icon-tile" id="btnFdMaturityChoicePayOut">
+        <span class="icon-tile-circle">💸</span>
+        <span class="icon-tile-label">Pay Out & Close</span>
+      </button>
+      <button type="button" class="icon-tile" id="btnFdMaturityChoiceReinvest">
+        <span class="icon-tile-circle">🔁</span>
+        <span class="icon-tile-label">Reinvest for Another Year</span>
+      </button>
+    </div>
+    <div class="modal-close-row">
+      <button class="btn secondary" id="btnFdMaturityChoiceCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="fdReinvestConfirmModal">
+  <div class="modal">
+    <h3>Reinvest at Maturity</h3>
+    <p class="sub" id="fdReinvestPlanLabel" style="margin:0 0 1rem;"></p>
+    <div class="metrics">
+      <div class="metric"><div class="label">New Principal</div><div class="value" id="fdReinvestNewPrincipal">—</div></div>
+      <div class="metric"><div class="label">New Maturity Date</div><div class="value" id="fdReinvestNewMaturity">—</div></div>
+    </div>
+    <p class="hint">The matured value (principal plus all interest earned) becomes the new principal for a fresh cycle, maturing on the next 30 April. No money changes hands — nothing is paid out now.</p>
+    <div class="error-text" id="fdReinvestModalError"></div>
+    <div class="modal-close-row">
+      <button class="btn secondary" id="btnFdReinvestCancel">Cancel</button>
+      <button class="btn" id="btnFdReinvestConfirm">Confirm Reinvest</button>
     </div>
   </div>
 </div>
@@ -4738,7 +4790,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'v2.31';
+const APP_VERSION = 'v2.37';
 
 // ---- Investor Mode Hindi/English toggle ----
 // Investor and account NAMES are data the user entered and are never
@@ -4791,10 +4843,9 @@ const HI = {
   'Record New Investment': 'नया निवेश दर्ज करें',
   'Search by name, ID or mobile...': 'नाम, आईडी या मोबाइल से खोजें...',
   'What type of investment is this?': 'यह किस प्रकार का निवेश है?',
-  'One Time Investment': 'एकमुश्त निवेश',
   'Regular Monthly Investment': 'नियमित मासिक निवेश',
   'Monthly Interest Payout': 'मासिक ब्याज भुगतान',
-  'Payout at Maturity': 'परिपक्वता पर भुगतान',
+  'Pay At Maturity': 'परिपक्वता पर भुगतान',
   'Cancel': 'रद्द करें',
   'Record Monthly Installment': 'मासिक किस्त दर्ज करें',
   'Add Funds to Account': 'खाते में राशि जोड़ें',
@@ -5298,6 +5349,7 @@ const RPC_MAP = {
   getAllFdPlans: 'get_all_fd_plans',
   recordFdPayout: 'record_fd_payout',
   closeFdMaturity: 'close_fd_maturity',
+  fdReinvestAtMaturity: 'fd_reinvest_at_maturity',
   breakRecurringPlan: 'break_recurring_plan',
   partialWithdrawRecurring: 'partial_withdraw_recurring',
   closeFdPlanEarly: 'close_fd_plan_early',
@@ -5373,7 +5425,7 @@ const ADMIN_ONLY_ACTIONS = new Set([
   'addInvestment','withdraw','editTransaction','deleteTransaction',
   'deleteAccount','getReportAsOf',
   'addRecurringPlan','processDueContributions','recurringPayInterest','recurringReinvestInterest',
-  'addFdPlan','recordFdPayout','closeFdMaturity',
+  'addFdPlan','recordFdPayout','closeFdMaturity','fdReinvestAtMaturity',
   'breakRecurringPlan','partialWithdrawRecurring','closeFdPlanEarly','partialWithdrawFd'
 ]);
 
@@ -9308,21 +9360,27 @@ function renderInvestmentValueDrillDown(bodyEl, data, valueKind){
     const inv = data.activeInvestors.find(i=> i.id === a.investorId);
     const rp = state.recurringPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
     const fp = state.fdPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
-    let type = 'ONE_TIME', typeLabel = 'One Time', detail = '—';
+    // "One Time Investment" was removed as a product type — every
+    // account now has either a Regular Monthly plan or an FD-style
+    // plan (Monthly Payout / Pay At Maturity). Any account somehow
+    // still missing both (shouldn't happen after the migration, but
+    // handled defensively) falls back to a plain, unlabeled row rather
+    // than a phantom "One Time" type that no longer exists anywhere else.
+    let type = 'UNLINKED', typeLabel = '—', detail = '—';
     if (rp){ type='RECURRING'; typeLabel='Regular Monthly'; detail = `₹${Number(rp.monthlyAmount).toLocaleString('en-IN')}/mo · due ${rp.contributionDay}${ordinalSuffix(rp.contributionDay)}`; }
     else if (fp && fp.planType==='MONTHLY_PAYOUT'){ type='MONTHLY_PAYOUT'; typeLabel='Monthly Payout'; detail = `₹${Number(fp.nextPayoutAmount||0).toLocaleString('en-IN',{maximumFractionDigits:0})}/mo · due ${fp.payoutDay}${ordinalSuffix(fp.payoutDay)}`; }
-    else if (fp && fp.planType==='MATURITY_PAYOUT'){ type='MATURITY_PAYOUT'; typeLabel='At Maturity'; detail = `matures ${fmtDate(fp.maturityDate)}`; }
+    else if (fp && fp.planType==='MATURITY_PAYOUT'){ type='MATURITY_PAYOUT'; typeLabel='Pay At Maturity'; detail = `matures ${fmtDate(fp.maturityDate)}`; }
     const principal = Number(a.runningBalance||0);
     const interest = Number(a.accruedInterest||0);
     const value = valueKind==='principal' ? principal : valueKind==='interest' ? interest : principal + interest;
     return { a, inv, type, typeLabel, detail, value };
   });
 
-  // Group by investor + type — one investor with 2 One Time accounts
-  // should show as ONE row (accounts summed, count shown), not two
-  // separate rows both labeled with their name. Different types for
-  // the same investor still get their own row, since they behave
-  // differently (e.g. Pooja's Monthly plan vs her One Time deposits).
+  // Group by investor + type — one investor with several accounts of
+  // the same type should show as ONE row (accounts summed, count
+  // shown), not a separate row per account. Different types for the
+  // same investor still get their own row, since they behave
+  // differently (e.g. Pooja's Monthly plan vs her Pay At Maturity accounts).
   const groups = new Map();
   perAccountRows.forEach(r=>{
     const key = `${r.a.investorId}::${r.type}`;
@@ -9337,22 +9395,23 @@ function renderInvestmentValueDrillDown(bodyEl, data, valueKind){
   const rowsWithType = [...groups.values()].map(g=> ({
     inv: g.inv, type: g.type, typeLabel: g.typeLabel, value: g.value,
     accountCount: g.accountCount,
-    // Regular Monthly / FD types only ever have one plan per investor
-    // in practice, so their single detail line still shows as-is; One
-    // Time can have several accounts, so show the count instead of
-    // trying to cram multiple detail strings into one line.
+    // Regular Monthly / Monthly Payout plans only ever have one per
+    // investor in practice, so their single detail line still shows
+    // as-is; Pay At Maturity can have several accounts (per investor),
+    // so show the count instead of cramming multiple maturity dates
+    // into one line.
     detail: g.accountCount > 1 ? `${g.accountCount} accounts` : g.details[0]
   }));
 
   const typeCounts = { ALL: rowsWithType.length };
-  ['ONE_TIME','RECURRING','MONTHLY_PAYOUT','MATURITY_PAYOUT'].forEach(k=>{
+  ['RECURRING','MONTHLY_PAYOUT','MATURITY_PAYOUT'].forEach(k=>{
     typeCounts[k] = rowsWithType.filter(r=> r.type===k).length;
   });
   const chipDefs = [
-    ['ALL','All'], ['ONE_TIME','One Time'], ['RECURRING','Regular Monthly'],
-    ['MONTHLY_PAYOUT','Monthly Payout'], ['MATURITY_PAYOUT','At Maturity']
+    ['ALL','All'], ['RECURRING','Regular Monthly'],
+    ['MONTHLY_PAYOUT','Monthly Payout'], ['MATURITY_PAYOUT','Pay At Maturity']
   ];
-  const typeColor = { ONE_TIME: 'var(--muted)', RECURRING: 'var(--accent-pool-1,#2563eb)', MONTHLY_PAYOUT: '#7c3aed', MATURITY_PAYOUT: '#7c3aed' };
+  const typeColor = { UNLINKED: 'var(--muted)', RECURRING: 'var(--accent-pool-1,#2563eb)', MONTHLY_PAYOUT: '#7c3aed', MATURITY_PAYOUT: '#7c3aed' };
 
   const renderFiltered = (filter)=>{
     const filtered = filter==='ALL' ? rowsWithType : rowsWithType.filter(r=> r.type===filter);
@@ -13626,7 +13685,7 @@ function updateFdFirstAmountSuggestion(){
 function openFdPlanModal(planType){
   fdPlanModalType = planType;
   const isMonthly = planType === 'MONTHLY_PAYOUT';
-  document.getElementById('fdPlanModalTitle').textContent = isMonthly ? 'New Monthly Interest Payout Plan' : 'New Payout at Maturity Plan';
+  document.getElementById('fdPlanModalTitle').textContent = isMonthly ? 'New Monthly Interest Payout Plan' : 'New Pay At Maturity Plan';
   document.getElementById('fdPayoutDayField').style.display = isMonthly ? '' : 'none';
   document.getElementById('fdFirstAmountField').style.display = isMonthly ? '' : 'none';
   document.getElementById('fdPayoutHint').style.display = isMonthly ? '' : 'none';
@@ -13716,7 +13775,7 @@ document.getElementById('btnFdPlanSave').addEventListener('click', async ()=>{
     });
     if (res && res.error){ errEl.textContent = res.error; return; }
     closeFdPlanModal();
-    toast(isMonthly ? 'Monthly Interest Payout plan created.' : 'Payout at Maturity plan created.');
+    toast(isMonthly ? 'Monthly Interest Payout plan created.' : 'Pay At Maturity plan created.');
     await refreshFdPlans();
     await refreshAll(false);
   }catch(err){
@@ -13836,6 +13895,54 @@ document.getElementById('btnFdMaturitySave').addEventListener('click', async ()=
     toast(`${fmtMoney(res.amount)} paid out at maturity — ${res.planNo}. Account closed.`);
     await refreshFdPlans();
     await refreshInvestorDues();
+    await refreshAll(false);
+  }catch(err){
+    errEl.textContent = err.message;
+  }
+});
+
+// ---- Matured Pay At Maturity plan: Pay Out vs Reinvest fork ----
+
+let fdMaturityChoiceTargetPlan = null;
+function openFdMaturityChoiceModal(plan){
+  fdMaturityChoiceTargetPlan = plan;
+  document.getElementById('fdMaturityChoicePlanLabel').textContent = `${plan.investorName || plan.investorId} — ${plan.planNo}`;
+  document.getElementById('fdMaturityChoiceValue').textContent = fmtMoney(Number(plan.currentValue || 0));
+  document.getElementById('fdMaturityChoiceModal').classList.add('show');
+}
+document.getElementById('btnFdMaturityChoiceCancel').addEventListener('click', ()=>{
+  document.getElementById('fdMaturityChoiceModal').classList.remove('show');
+});
+document.getElementById('btnFdMaturityChoicePayOut').addEventListener('click', ()=>{
+  document.getElementById('fdMaturityChoiceModal').classList.remove('show');
+  openFdMaturityModal(fdMaturityChoiceTargetPlan);
+});
+document.getElementById('btnFdMaturityChoiceReinvest').addEventListener('click', ()=>{
+  document.getElementById('fdMaturityChoiceModal').classList.remove('show');
+  const plan = fdMaturityChoiceTargetPlan;
+  document.getElementById('fdReinvestPlanLabel').textContent = `${plan.investorName || plan.investorId} — ${plan.planNo}`;
+  document.getElementById('fdReinvestNewPrincipal').textContent = fmtMoney(Number(plan.currentValue || 0));
+  // Next 30 April after the current maturity date — mirrors the same
+  // rule used when the plan was first created, just anchored to the
+  // OLD maturity date instead of the original start date.
+  const oldMaturity = new Date(plan.maturityDate);
+  const nextYear = oldMaturity.getMonth() < 3 ? oldMaturity.getFullYear() : oldMaturity.getFullYear() + 1;
+  document.getElementById('fdReinvestNewMaturity').textContent = fmtDate(`${nextYear}-04-30`);
+  document.getElementById('fdReinvestModalError').textContent = '';
+  document.getElementById('fdReinvestConfirmModal').classList.add('show');
+});
+document.getElementById('btnFdReinvestCancel').addEventListener('click', ()=>{
+  document.getElementById('fdReinvestConfirmModal').classList.remove('show');
+});
+document.getElementById('btnFdReinvestConfirm').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('fdReinvestModalError');
+  errEl.textContent = '';
+  try{
+    const res = await apiPost('fdReinvestAtMaturity', { fdPlanId: fdMaturityChoiceTargetPlan.id, date: todayISO() });
+    if (res && res.error){ errEl.textContent = res.error; return; }
+    document.getElementById('fdReinvestConfirmModal').classList.remove('show');
+    toast(`Reinvested — new principal ${fmtMoney(res.newPrincipal)}, matures ${fmtDate(res.newMaturityDate)}.`);
+    await refreshFdPlans();
     await refreshAll(false);
   }catch(err){
     errEl.textContent = err.message;
@@ -13976,7 +14083,7 @@ function openFdWithdrawModal(planId){
   const acc = state.accounts.find(a=> String(a.id)===String(fwTargetPlan.accountId));
   const isMonthly = fwTargetPlan.planType === 'MONTHLY_PAYOUT';
   document.getElementById('fwPlanLabel').textContent =
-    `${fwTargetPlan.investorName || fwTargetPlan.investorId} — ${acc ? acc.accountNo : ''} (${isMonthly ? 'Monthly Payout' : 'Payout at Maturity'})`;
+    `${fwTargetPlan.investorName || fwTargetPlan.investorId} — ${acc ? acc.accountNo : ''} (${isMonthly ? 'Monthly Payout' : 'Pay At Maturity'})`;
   document.getElementById('fwChoiceRow').style.display = '';
   document.getElementById('fwChoiceCancelRow').style.display = '';
   document.getElementById('fwPartialSection').style.display = 'none';
@@ -14380,10 +14487,12 @@ function renderInvestorProfile(id){
       };
     } else if (fdPlan && fdPlan.planType === 'MATURITY_PAYOUT'){
       fdBtn.style.display = '';
-      fdBtn.textContent = 'Pay Out at Maturity';
+      const isMatured = fdPlan.maturityDate && todayISO() >= fdPlan.maturityDate;
+      fdBtn.textContent = isMatured ? 'Matured — Pay Out or Reinvest' : 'Pay At Maturity Options';
       fdBtn.onclick = ()=>{
         document.getElementById('accDetailModal').classList.remove('show');
-        openFdMaturityModal(fdPlan);
+        if (isMatured) openFdMaturityChoiceModal(fdPlan);
+        else openFdMaturityModal(fdPlan);
       };
     } else {
       fdBtn.style.display = 'none';
@@ -15283,16 +15392,19 @@ function setTopUpMode(accountId, accountNo){
 
   const plan = findActiveRecurringPlanForAccount(accountId);
   if (plan){
-    // This account has a Monthly Investment Plan — pre-fill the plan's
-    // amount and make it clear this will be recorded as that month's
-    // installment, not a generic top-up. Rajendra never has to pick
-    // the right button; the app already knows.
+    // This account has a Monthly Investment Plan — pre-fill the
+    // EXPECTED amount as a starting point, but this is a suggestion,
+    // not a lock: investors don't always pay the same amount every
+    // month (Neetu, for example, paid ₹5,000 some months and ₹10,000
+    // others), and the matching logic below keys off the MONTH, not
+    // the amount, so any figure typed here still correctly matches
+    // and clears the right month.
     document.getElementById('invAmount').value = Number(plan.monthlyAmount);
     document.getElementById('btnSubmitInvestment').textContent = 'Record Monthly Installment';
     document.getElementById('invHintText').innerHTML =
-      `<b>${escapeHtml(accountNo)} has an active Monthly Investment Plan (${plan.planNo})</b> — ` +
-      `₹${Number(plan.monthlyAmount).toLocaleString('en-IN')}/month, due on the ${plan.contributionDay}${ordinalSuffix(plan.contributionDay)}. ` +
-      `This payment will automatically be matched to the correct month.`;
+      `<b>${escapeHtml(accountNo)} has a Monthly Investment Plan (${plan.planNo})</b> — ` +
+      `Her usual amount is ₹${Number(plan.monthlyAmount).toLocaleString('en-IN')}, due on the ${plan.contributionDay}${ordinalSuffix(plan.contributionDay)}. ` +
+      `If she is paying more or less this month, you can change the number. It will still go to the correct month.`;
     if (invAllocPicker) invAllocPicker.refresh();
   } else {
     document.getElementById('btnSubmitInvestment').textContent = 'Add Funds to Account';
@@ -15372,8 +15484,13 @@ document.getElementById('btnSubmitInvestment').addEventListener('click', async (
     const investor = state.investors.find(i=> String(i.id)===String(investorId));
     const accountNo = res.account ? res.account.accountNo : (document.getElementById('invModeChoice').dataset.matchedAccountNo || '');
     if (res.recurringMatched){
+      const plan = state.recurringPlans.find(p=> p.planNo === res.recurringPlanNo);
+      const expected = plan ? Number(plan.monthlyAmount) : null;
+      const diffNote = (expected && Math.abs(amount - expected) > 0.01)
+        ? ` (usual amount was ${fmtMoneyWhole(expected)} — this month still marked as paid)`
+        : '';
       showSuccessModal('Monthly Installment Recorded',
-        `${fmtMoneyWhole(amount)} recorded against ${accountNo} — Month ${res.recurringCycleNo} of plan ${res.recurringPlanNo} (due ${fmtDate(res.recurringDueDate)}).`);
+        `${fmtMoneyWhole(amount)} recorded against ${accountNo} — Month ${res.recurringCycleNo} of plan ${res.recurringPlanNo} (due ${fmtDate(res.recurringDueDate)})${diffNote}.`);
     } else if (res.recurringNote){
       showSuccessModal('Amount Deposited', `${fmtMoneyWhole(amount)} added to ${accountNo}. ${res.recurringNote}`);
     } else {
@@ -17097,11 +17214,6 @@ document.getElementById('btnNewInvestmentTile').addEventListener('click', ()=>{
 });
 document.getElementById('btnNewInvestmentChoiceCancel').addEventListener('click', ()=>{
   document.getElementById('newInvestmentChoiceModal').classList.remove('show');
-});
-document.getElementById('btnPickOneTime').addEventListener('click', ()=>{
-  document.getElementById('newInvestmentChoiceModal').classList.remove('show');
-  showSubScreen('inv-deposits');
-  document.querySelectorAll('[data-subscreen]').forEach(b=> b.classList.toggle('active', b.id==='btnNewInvestmentTile'));
 });
 document.getElementById('btnPickMonthly').addEventListener('click', ()=>{
   document.getElementById('newInvestmentChoiceModal').classList.remove('show');
