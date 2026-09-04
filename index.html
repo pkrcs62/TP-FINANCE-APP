@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FinSphere v2.28 &mdash; Borrow • Invest • Grow</title>
+<title>FinSphere v2.31 &mdash; Borrow • Invest • Grow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Poppins:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
@@ -1846,6 +1846,35 @@
     -webkit-overflow-scrolling:touch;
   }
 
+  /* Desktop/large-screen layer. Everything above this point (and the
+     mobile-narrowing rules below at max-width:900px/760px/420px) is
+     the original mobile-first design and stays completely untouched —
+     this block only ADDS wider layout at larger widths, the same way
+     a native app differs between its phone and desktop builds rather
+     than just stretching one across both. Placed here, after every
+     base class definition, so cascade order lets it actually win at
+     these widths instead of being silently overridden by a same-
+     specificity rule that appears later in the file. */
+  @media (min-width:1200px){
+    .wrap{max-width:1400px;padding:0 2rem;}
+    .metrics{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;}
+    .chip-scroll{grid-template-columns:repeat(4, 1fr);gap:.85rem;}
+    .card{padding:1.6rem 1.8rem;}
+    .field-row{gap:1.4rem;}
+    .investor-list{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem .9rem;}
+    .investment-type-list{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem .9rem;}
+    .compact-loan-list{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem .9rem;}
+    .modal{max-width:640px;}
+    #investorLedgerModal .modal, #recurringPlanModal .modal, #fdPlanModal .modal{max-width:720px;}
+  }
+  @media (min-width:1600px){
+    .wrap{max-width:1680px;}
+    .chip-scroll{grid-template-columns:repeat(5, 1fr);}
+    .investor-list{grid-template-columns:repeat(3,1fr);}
+    .investment-type-list{grid-template-columns:repeat(3,1fr);}
+    .compact-loan-list{grid-template-columns:repeat(3,1fr);}
+  }
+
   @media (max-width: 900px){
     .wrap{padding:0 .9rem;}
     .metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -3385,6 +3414,11 @@
         <input type="number" id="fdPayoutDay" min="1" max="28" placeholder="e.g. 1">
       </div>
     </div>
+    <div id="fdFirstAmountField" style="display:none;">
+      <label for="fdFirstAmount">First Month's Payout Amount (Rs.)</label>
+      <input type="number" id="fdFirstAmount" min="0.01" step="0.01">
+      <p class="hint" id="fdFirstAmountHint"></p>
+    </div>
     <p class="hint" id="fdMaturityHint" style="display:none;">Matures on the next 30 April after the start date &mdash; principal plus all accumulated interest is paid out together at maturity, closing the account.</p>
     <p class="hint" id="fdPayoutHint">Interest is calculated daily on the fixed principal and paid out to the investor every month &mdash; the principal itself never changes.</p>
     <label for="fdPaymentMode">Mode of Receipt (opening deposit)</label>
@@ -3435,8 +3469,10 @@
     <p class="sub" id="fdPayoutPlanLabel" style="margin:0 0 1rem;"></p>
     <div class="metrics">
       <div class="metric"><div class="label">Period</div><div class="value" id="fdPayoutPeriodLabel">—</div></div>
-      <div class="metric"><div class="label">Amount Due</div><div class="value" id="fdPayoutAmountLabel">—</div></div>
     </div>
+    <label for="fdPayoutAmount">Payout Amount (Rs.)</label>
+    <input type="number" id="fdPayoutAmount" min="0.01" step="0.01">
+    <p class="hint" id="fdPayoutCalcHint"></p>
     <label for="fdPayoutDate">Payout Date</label>
     <input type="date" id="fdPayoutDate">
     <label for="fdPayoutPaymentMode">Mode of Payment</label>
@@ -4702,7 +4738,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'v2.28';
+const APP_VERSION = 'v2.31';
 
 // ---- Investor Mode Hindi/English toggle ----
 // Investor and account NAMES are data the user entered and are never
@@ -9268,7 +9304,7 @@ function renderInvestmentValueDrillDown(bodyEl, data, valueKind){
   // which single number is pulled out per account. Never mixes in the
   // other two numbers, per the agreed "extract just the one value"
   // design for each of these three views.
-  const rowsWithType = data.activeAccounts.map(a=>{
+  const perAccountRows = data.activeAccounts.map(a=>{
     const inv = data.activeInvestors.find(i=> i.id === a.investorId);
     const rp = state.recurringPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
     const fp = state.fdPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
@@ -9281,6 +9317,32 @@ function renderInvestmentValueDrillDown(bodyEl, data, valueKind){
     const value = valueKind==='principal' ? principal : valueKind==='interest' ? interest : principal + interest;
     return { a, inv, type, typeLabel, detail, value };
   });
+
+  // Group by investor + type — one investor with 2 One Time accounts
+  // should show as ONE row (accounts summed, count shown), not two
+  // separate rows both labeled with their name. Different types for
+  // the same investor still get their own row, since they behave
+  // differently (e.g. Pooja's Monthly plan vs her One Time deposits).
+  const groups = new Map();
+  perAccountRows.forEach(r=>{
+    const key = `${r.a.investorId}::${r.type}`;
+    if (!groups.has(key)){
+      groups.set(key, { inv: r.inv, type: r.type, typeLabel: r.typeLabel, value: 0, accountCount: 0, details: [] });
+    }
+    const g = groups.get(key);
+    g.value += r.value;
+    g.accountCount += 1;
+    g.details.push(r.detail);
+  });
+  const rowsWithType = [...groups.values()].map(g=> ({
+    inv: g.inv, type: g.type, typeLabel: g.typeLabel, value: g.value,
+    accountCount: g.accountCount,
+    // Regular Monthly / FD types only ever have one plan per investor
+    // in practice, so their single detail line still shows as-is; One
+    // Time can have several accounts, so show the count instead of
+    // trying to cram multiple detail strings into one line.
+    detail: g.accountCount > 1 ? `${g.accountCount} accounts` : g.details[0]
+  }));
 
   const typeCounts = { ALL: rowsWithType.length };
   ['ONE_TIME','RECURRING','MONTHLY_PAYOUT','MATURITY_PAYOUT'].forEach(k=>{
@@ -9298,7 +9360,7 @@ function renderInvestmentValueDrillDown(bodyEl, data, valueKind){
     return `<div class="investment-type-list">` + filtered.map(r=> `
       <div class="investment-type-row">
         <span class="investment-type-tag" style="background:${typeColor[r.type]};">${r.typeLabel}</span>
-        <span class="investment-type-name" data-drill-investor-id="${r.a.investorId}">${escapeHtml(r.inv ? r.inv.name : '(unknown)')}</span>
+        <span class="investment-type-name" data-drill-investor-id="${r.inv ? r.inv.id : ''}">${escapeHtml(r.inv ? r.inv.name : '(unknown)')}</span>
         <span class="investment-type-principal">${fmtMoneyWhole(r.value)}</span>
         <span class="investment-type-detail">${r.detail}</span>
       </div>`).join('') + `</div>`;
@@ -13545,11 +13607,28 @@ document.getElementById('btnRecurringPlanSave').addEventListener('click', async 
 
 let fdAllocPicker = null;
 let fdPlanModalType = 'MONTHLY_PAYOUT';
+function updateFdFirstAmountSuggestion(){
+  const principal = parseFloat(document.getElementById('fdPrincipal').value) || 0;
+  const roi = parseFloat(document.getElementById('fdAnnualRoi').value) || 0;
+  if (!(principal > 0) || !(roi > 0)){
+    document.getElementById('fdFirstAmountHint').textContent = 'Enter principal and ROI to see the system-calculated suggestion.';
+    return;
+  }
+  // Approximate using a 30-day month — the exact figure depends on the
+  // real first period's day-count, which the plan doesn't have until
+  // it's actually created. Close enough to suggest a starting number;
+  // admin can retype it either way, and the real figure shows on the
+  // account immediately after creation.
+  const suggested = Math.round(principal * roi * 30 / 36500);
+  document.getElementById('fdFirstAmount').value = suggested;
+  document.getElementById('fdFirstAmountHint').textContent = `System-calculated estimate (~30 days): ₹${suggested.toLocaleString('en-IN')}. Change the amount above if you're agreeing a different figure.`;
+}
 function openFdPlanModal(planType){
   fdPlanModalType = planType;
   const isMonthly = planType === 'MONTHLY_PAYOUT';
   document.getElementById('fdPlanModalTitle').textContent = isMonthly ? 'New Monthly Interest Payout Plan' : 'New Payout at Maturity Plan';
   document.getElementById('fdPayoutDayField').style.display = isMonthly ? '' : 'none';
+  document.getElementById('fdFirstAmountField').style.display = isMonthly ? '' : 'none';
   document.getElementById('fdPayoutHint').style.display = isMonthly ? '' : 'none';
   document.getElementById('fdMaturityHint').style.display = isMonthly ? 'none' : '';
 
@@ -13563,6 +13642,8 @@ function openFdPlanModal(planType){
   document.getElementById('fdAnnualRoi').value = '';
   document.getElementById('fdStartDate').value = todayISO();
   document.getElementById('fdPayoutDay').value = '1';
+  document.getElementById('fdFirstAmount').value = '';
+  document.getElementById('fdFirstAmountHint').textContent = 'Enter principal and ROI to see the system-calculated suggestion.';
   document.getElementById('fdPaymentMode').value = '';
   document.getElementById('fdPlanModalError').textContent = '';
   document.getElementById('fdPlanModal').classList.add('show');
@@ -13586,7 +13667,8 @@ function closeFdPlanModal(){
   document.getElementById('fdPlanModal').classList.remove('show');
 }
 document.getElementById('btnFdPlanCancel').addEventListener('click', closeFdPlanModal);
-document.getElementById('fdPrincipal').addEventListener('input', ()=>{ if (fdAllocPicker) fdAllocPicker.refresh(); });
+document.getElementById('fdPrincipal').addEventListener('input', ()=>{ if (fdAllocPicker) fdAllocPicker.refresh(); if (fdPlanModalType==='MONTHLY_PAYOUT') updateFdFirstAmountSuggestion(); });
+document.getElementById('fdAnnualRoi').addEventListener('input', ()=>{ if (fdPlanModalType==='MONTHLY_PAYOUT') updateFdFirstAmountSuggestion(); });
 document.getElementById('fdInvestor').addEventListener('change', function(){
   const investorId = this.value;
   if (!investorId || fdPlanModalType !== 'MONTHLY_PAYOUT') return;
@@ -13612,6 +13694,7 @@ document.getElementById('btnFdPlanSave').addEventListener('click', async ()=>{
   const annualRoi = parseFloat(document.getElementById('fdAnnualRoi').value);
   const startDate = document.getElementById('fdStartDate').value;
   const payoutDay = parseInt(document.getElementById('fdPayoutDay').value, 10);
+  const firstAmount = parseFloat(document.getElementById('fdFirstAmount').value);
   const paymentMode = document.getElementById('fdPaymentMode').value;
   const isMonthly = fdPlanModalType === 'MONTHLY_PAYOUT';
 
@@ -13620,12 +13703,15 @@ document.getElementById('btnFdPlanSave').addEventListener('click', async ()=>{
   if (!(annualRoi > 0)){ errEl.textContent = 'Enter a valid annual ROI.'; return; }
   if (!startDate){ errEl.textContent = 'Select a start date.'; return; }
   if (isMonthly && !(payoutDay >= 1 && payoutDay <= 28)){ errEl.textContent = 'Payout day must be between 1 and 28.'; return; }
+  if (isMonthly && !(firstAmount > 0)){ errEl.textContent = 'Enter the first month\'s payout amount.'; return; }
   if (!fdAllocPicker || !fdAllocPicker.isValid()){ errEl.textContent = 'Pool allocations must add up to the principal amount.'; return; }
 
   try{
     const res = await apiPost('addFdPlan', {
       investorId, planType: fdPlanModalType, principal, annualRoi, startDate,
-      payoutDay: isMonthly ? payoutDay : null, paymentMode,
+      payoutDay: isMonthly ? payoutDay : null,
+      overrideAmount: isMonthly ? firstAmount : null,
+      paymentMode,
       poolAllocations: fdAllocPicker.getAllocations()
     });
     if (res && res.error){ errEl.textContent = res.error; return; }
@@ -13647,7 +13733,8 @@ function openFdPayoutModal(plan){
   document.getElementById('fdPayoutPlanLabel').textContent = `${plan.investorName || plan.investorId} — ${plan.planNo}`;
   const nextAmount = Number(plan.nextPayoutAmount || 0);
   document.getElementById('fdPayoutPeriodLabel').textContent = plan.nextPayoutDate ? `Due ${fmtDate(plan.nextPayoutDate)}` : '—';
-  document.getElementById('fdPayoutAmountLabel').textContent = fmtMoney(nextAmount);
+  document.getElementById('fdPayoutAmount').value = nextAmount;
+  document.getElementById('fdPayoutCalcHint').textContent = `System-calculated interest for this period is ₹${nextAmount.toLocaleString('en-IN')}. Change the amount above if you're paying a different figure.`;
   document.getElementById('fdPayoutDate').value = todayISO();
   document.getElementById('fdPayoutPaymentMode').value = '';
   document.getElementById('fdPayoutModalError').textContent = '';
@@ -13659,7 +13746,7 @@ function openFdPayoutModal(plan){
       fdPayoutAllocPicker = createAllocationInline(
         document.getElementById('fdPayoutAllocTrigger'),
         document.getElementById('fdPayoutAllocInline'),
-        ()=> nextAmount,
+        ()=> Number(document.getElementById('fdPayoutAmount').value || 0),
         document.getElementById('fdPayoutAllocSummary'),
         'OUT'
       );
@@ -13668,20 +13755,23 @@ function openFdPayoutModal(plan){
     }
   });
 }
+document.getElementById('fdPayoutAmount').addEventListener('input', ()=>{ if (fdPayoutAllocPicker) fdPayoutAllocPicker.refresh(); });
 document.getElementById('btnFdPayoutCancel').addEventListener('click', ()=>{
   document.getElementById('fdPayoutModal').classList.remove('show');
 });
 document.getElementById('btnFdPayoutSave').addEventListener('click', async ()=>{
   const errEl = document.getElementById('fdPayoutModalError');
   errEl.textContent = '';
+  const overrideAmount = parseFloat(document.getElementById('fdPayoutAmount').value);
   const date = document.getElementById('fdPayoutDate').value;
   const paymentMode = document.getElementById('fdPayoutPaymentMode').value;
+  if (!(overrideAmount > 0)){ errEl.textContent = 'Enter a valid payout amount.'; return; }
   if (!date){ errEl.textContent = 'Select a payout date.'; return; }
   if (!fdPayoutAllocPicker || !fdPayoutAllocPicker.isValid()){ errEl.textContent = 'Pool allocations must add up to the payout amount.'; return; }
 
   try{
     const res = await apiPost('recordFdPayout', {
-      fdPlanId: fdPayoutTargetPlan.id, date, paymentMode,
+      fdPlanId: fdPayoutTargetPlan.id, date, paymentMode, overrideAmount,
       poolAllocations: fdPayoutAllocPicker.getAllocations()
     });
     if (res && res.error){ errEl.textContent = res.error; return; }
