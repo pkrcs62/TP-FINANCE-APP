@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FinSphere v2.26 &mdash; Borrow • Invest • Grow</title>
+<title>FinSphere v2.28 &mdash; Borrow • Invest • Grow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Poppins:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
@@ -92,15 +92,15 @@
   h1,h2,h3,.brand-stack,.mode-tile .tile-title,.metric .value{font-family:var(--serif);letter-spacing:-.01em;}
 
   body.mode-investor{
-    --bg:#f1f3f4;
+    --bg:#eef1f5;
     --bg-elev:#ffffff;
     --panel:#ffffff;
     --panel-hi:#f8f9fa;
-    --border:#e8eaed;
-    --border-hi:#dadce0;
-    --ink:#202124;
-    --muted:#5f6368;
-    --muted-dim:#80868b;
+    --border:#dfe3e8;
+    --border-hi:#c7ccd3;
+    --ink:#16181c;
+    --muted:#495057;
+    --muted-dim:#5f6670;
     --mint:#1a73e8;
     --mint-deep:#1557b0;
     --mint-glow:rgba(26,115,232,.10);
@@ -108,6 +108,7 @@
     --red:#d93025;
     --red-glow:rgba(217,48,37,.08);
     --amber:#e37400;
+    --mint-contrast:#ffffff;
     --sans:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --serif:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --r-sm:6px; --r-md:10px; --r-lg:14px;
@@ -603,11 +604,19 @@
   .chip-scroll{display:grid;grid-template-columns:repeat(2, 1fr);gap:.55rem;padding:.15rem .05rem .5rem;margin-bottom:.3rem;}
   .metric-chip{
     background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);
-    padding:.65rem .85rem;transition:border-color .2s;
+    padding:.65rem .85rem;transition:border-color .2s, box-shadow .2s, transform .2s;
+  }
+  body.mode-investor .metric-chip{
+    box-shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
   }
   .metric-chip.metric-clickable:hover{border-color:var(--mint);}
+  body.mode-investor .metric-chip.metric-clickable:hover{
+    box-shadow:0 2px 6px rgba(16,24,40,.08), 0 4px 12px rgba(16,24,40,.06);
+    transform:translateY(-1px);
+  }
   .metric-chip .label{font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-dim);font-weight:600;white-space:nowrap;margin-bottom:.25rem;}
   .metric-chip .value{font-family:var(--mono);font-size:1.02rem;font-weight:700;color:var(--ink);}
+  body.mode-investor .metric-chip .value{color:var(--mint-deep);}
   .metric-chip .value.neg{color:var(--red);}
   .metric-chip .value.zero{color:var(--muted-dim);font-weight:500;}
 
@@ -4693,7 +4702,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'v2.26';
+const APP_VERSION = 'v2.28';
 
 // ---- Investor Mode Hindi/English toggle ----
 // Investor and account NAMES are data the user entered and are never
@@ -9396,14 +9405,17 @@ function openInvestorDrillDownModal(key, data){
   } else if (key === 'amount-invested'){
     titleEl.textContent = 'Amount Invested';
     renderInvestmentValueDrillDown(bodyEl, data, 'principal');
+    document.getElementById('drillDownModal').classList.add('show');
     return;
   } else if (key === 'accrued-interest'){
     titleEl.textContent = 'Interest Accrued';
     renderInvestmentValueDrillDown(bodyEl, data, 'interest');
+    document.getElementById('drillDownModal').classList.add('show');
     return;
   } else if (key === 'total-value'){
     titleEl.textContent = 'Current Investment Value';
     renderInvestmentValueDrillDown(bodyEl, data, 'total');
+    document.getElementById('drillDownModal').classList.add('show');
     return;
   } else if (key === 'no-investment'){
     titleEl.textContent = 'Investors with No Investment';
