@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FinSphere v2.20 &mdash; Borrow • Invest • Grow</title>
+<title>FinSphere v2.21 &mdash; Borrow • Invest • Grow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Poppins:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Poppins:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.46.0/tabler-icons.min.css">
 
 <!-- PWA: installability -->
@@ -52,6 +52,17 @@
     --r-sm:4px; --r-md:6px; --r-lg:8px;
     --ease-pop: cubic-bezier(.34,1.56,.64,1);
     --ease-out: cubic-bezier(.16,1,.3,1);
+  }
+
+  /* Devanagari renders noticeably better in a script-matched typeface
+     than a Latin-focused sans font stack — swap --sans (used
+     everywhere via var()) to Noto Sans Devanagari whenever the
+     Investor Mode Hindi toggle is on. Falls back to the normal Latin
+     stack for any remaining English text (investor/account names,
+     numbers) since the browser only substitutes glyphs it can't find
+     in the primary font. */
+  body.lang-hi{
+    --sans: 'Noto Sans Devanagari', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
   *{box-sizing:border-box;}
   /* Generic hidden utility — several elements across the app relied on
@@ -100,6 +111,16 @@
     --sans:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --serif:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --r-sm:6px; --r-md:10px; --r-lg:14px;
+  }
+  /* Hindi mode gets a distinct warm saffron accent instead of the usual
+     blue — purely a visual cue so it's obvious at a glance which
+     language is active, scoped to Investor Mode only (Borrower/Funds
+     modes are untouched regardless of this toggle). */
+  body.mode-investor.lang-hi{
+    --mint:#e8720c;
+    --mint-deep:#c25e08;
+    --mint-glow:rgba(232,114,12,.14);
+    --violet:#e8720c;
   }
   body.mode-investor h1, body.mode-investor h2, body.mode-investor h3,
   body.mode-investor .brand-stack, body.mode-investor .mode-tile .tile-title,
@@ -4461,7 +4482,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'v2.20';
+const APP_VERSION = 'v2.21';
 
 // ---- Investor Mode Hindi/English toggle ----
 // Investor and account NAMES are data the user entered and are never
@@ -4543,6 +4564,15 @@ const HI = {
   'Due': 'देय',
   'Overdue since': 'अतिदेय तिथि',
   'of': 'में से',
+  'Total Principal': 'कुल मूलधन',
+  'active investor': 'सक्रिय निवेशक',
+  'avg ROI': 'औसत ब्याज दर',
+  'Active Investors': 'सक्रिय निवेशक',
+  'Total Amount Invested': 'कुल निवेशित राशि',
+  'Investors with No Investment': 'बिना निवेश वाले निवेशक',
+  'Investor Book': 'निवेशक बही',
+  'Avg. ROI': 'औसत ब्याज दर',
+  'latest 15 investor transactions, principal only': 'नवीनतम 15 निवेशक लेनदेन, केवल मूलधन',
 };
 
 // Fallback text is looked up as-is; a missing key just shows English —
@@ -4553,7 +4583,8 @@ function t(english){
 }
 
 function applyInvestorLanguage(){
-  document.querySelectorAll('#screen-investors [data-i18n], #screen-investor-profile [data-i18n]').forEach(el=>{
+  document.body.classList.toggle('lang-hi', investorLang === 'hi');
+  document.querySelectorAll('#screen-investors [data-i18n], #screen-investor-profile [data-i18n], #screen-dashboard [data-i18n]').forEach(el=>{
     el.textContent = t(el.dataset.i18n);
   });
   const toggleBtn = document.getElementById('btnLangToggle');
@@ -4570,6 +4601,7 @@ function setInvestorLanguage(lang){
   if (currentMode === 'INVESTOR'){
     if (typeof renderInvestorList === 'function') renderInvestorList();
     if (state.selectedInvestorId && typeof renderInvestorProfile === 'function') renderInvestorProfile(state.selectedInvestorId);
+    if (typeof renderDashboard === 'function') renderDashboard();
   }
 }
 
@@ -8202,15 +8234,16 @@ function renderDashboard(){
       !activeAccounts.some(a => a.investorId === inv.id)
     ).length;
 
-    document.getElementById('dashHeroLabel').textContent = 'Total Principal';
+    document.getElementById('dashHeroLabel').textContent = t('Total Principal');
     document.getElementById('dashHeroValue').textContent = fmtMoneyWhole(totalPrincipal);
-    document.getElementById('dashHeroFoot').textContent = `${activeInvestors.length} active investor${activeInvestors.length===1?'':'s'} · avg ROI ${avgRoi.toFixed(2)}%`;
+    const investorCountSuffix = investorLang === 'hi' ? '' : (activeInvestors.length===1 ? '' : 's');
+    document.getElementById('dashHeroFoot').textContent = `${activeInvestors.length} ${t('active investor')}${investorCountSuffix} · ${t('avg ROI')} ${avgRoi.toFixed(2)}%`;
 
     const investorChips = [
-      ['Active Investors', activeInvestors.length, false, 'active-investors'],
-      ['Total Amount Invested', fmtMoneyWhole(totalPrincipal), false, 'amount-invested'],
-      ['Total Accrued Interest', fmtMoneyWhole(totalAccrued), false, 'accrued-interest'],
-      ['Investors with No Investment', investorsWithoutAccount, investorsWithoutAccount>0, 'no-investment']
+      [t('Active Investors'), activeInvestors.length, false, 'active-investors'],
+      [t('Total Amount Invested'), fmtMoneyWhole(totalPrincipal), false, 'amount-invested'],
+      [t('Total Accrued Interest'), fmtMoneyWhole(totalAccrued), false, 'accrued-interest'],
+      [t('Investors with No Investment'), investorsWithoutAccount, investorsWithoutAccount>0, 'no-investment']
     ];
     document.getElementById('dashMetrics').innerHTML = investorChips.map(([label,value,isNeg,drillKey])=>
       `<div class="metric-chip${drillKey ? ' metric-clickable' : ''}" ${drillKey ? `data-inv-drill="${drillKey}"` : ''}><div class="label">${label}</div><div class="value${isNeg ? ' neg' : ''}">${value}</div></div>`
@@ -8222,20 +8255,20 @@ function renderDashboard(){
     const bookTilesEl = document.getElementById('dashBookTiles');
     bookTilesEl.innerHTML = `<button type="button" class="icon-tile" id="btnOpenInvestorBook">
       <span class="icon-tile-circle">📊</span>
-      <span class="icon-tile-label">Investor Book</span>
+      <span class="icon-tile-label">${t('Investor Book')}</span>
     </button>`;
     document.getElementById('btnOpenInvestorBook').addEventListener('click', ()=>{
       document.getElementById('investorBookModalBody').innerHTML = `
         <div class="metrics">
-          <div class="metric"><div class="label">Accrued Interest</div><div class="value">${fmtMoneyWhole(totalAccrued)}</div></div>
-          <div class="metric"><div class="label">Avg. ROI</div><div class="value">${avgRoi.toFixed(2)}%</div></div>
-          <div class="metric"><div class="label">Active Investors</div><div class="value">${activeInvestors.length}</div></div>
+          <div class="metric"><div class="label">${t('Accrued Interest')}</div><div class="value">${fmtMoneyWhole(totalAccrued)}</div></div>
+          <div class="metric"><div class="label">${t('Avg. ROI')}</div><div class="value">${avgRoi.toFixed(2)}%</div></div>
+          <div class="metric"><div class="label">${t('Active Investors')}</div><div class="value">${activeInvestors.length}</div></div>
         </div>`;
       document.getElementById('investorBookModal').classList.add('show');
     });
 
     const sub = document.getElementById('dashActivitySub');
-    if (sub) sub.textContent = 'latest 15 investor transactions, principal only';
+    if (sub) sub.textContent = t('latest 15 investor transactions, principal only');
   } else {
     // Borrower Mode: now backed by the real Loan Module (loan_accounts /
     // loan_transactions) instead of the old single loanAmount field on the
