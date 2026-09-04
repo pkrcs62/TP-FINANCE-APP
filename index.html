@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FinSphere v2.22 &mdash; Borrow • Invest • Grow</title>
+<title>FinSphere v2.25 &mdash; Borrow • Invest • Grow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Poppins:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
@@ -1218,6 +1218,27 @@
     text-transform:uppercase;letter-spacing:.03em;
   }
   table.drill-table td.neg{color:var(--red);font-weight:700;}
+  /* Compact "All Investments" card list — Type leads each row as a
+     colored tag rather than a plain table column, and account numbers
+     are dropped entirely since they add no value at this zoomed-out
+     level (drill into the investor's profile for that detail). */
+  .investment-type-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem;}
+  .investment-type-row{
+    display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);
+    padding:.55rem .75rem;
+  }
+  .investment-type-tag{
+    flex:0 0 auto;color:#fff;font-size:.7rem;font-weight:700;
+    padding:.2rem .55rem;border-radius:999px;white-space:nowrap;
+  }
+  .investment-type-name{flex:1 1 auto;min-width:90px;font-size:.85rem;font-weight:600;color:var(--ink);cursor:pointer;}
+  .investment-type-name:hover{color:var(--mint);}
+  .investment-type-principal{flex:0 0 auto;font-size:.85rem;font-weight:700;}
+  .investment-type-detail{flex:1 1 100%;font-size:.75rem;color:var(--muted);}
+  @media (min-width:480px){
+    .investment-type-detail{flex:0 0 auto;width:auto;margin-left:auto;}
+  }
   /* Passbook-style pool ledger — same bordered table, plus real
      bank-statement touches: right-aligned, monospace amount/balance
      columns, and the transaction remark shown as a subline under its
@@ -4672,7 +4693,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'v2.22';
+const APP_VERSION = 'v2.25';
 
 // ---- Investor Mode Hindi/English toggle ----
 // Investor and account NAMES are data the user entered and are never
@@ -4713,6 +4734,7 @@ const HI = {
   'CLOSED': 'बंद',
   'Total Running Balance': 'कुल चालू शेष',
   'Total Accrued Interest': 'कुल अर्जित ब्याज',
+  'Total Value (Principal + Interest)': 'कुल मूल्य (मूलधन + ब्याज)',
   'Total Current Value': 'कुल वर्तमान मूल्य',
   'Investment Accounts': 'निवेश खाते',
   'Combined Ledger': 'संयुक्त लेजर',
@@ -8429,15 +8451,19 @@ function renderDashboard(){
       !activeAccounts.some(a => a.investorId === inv.id)
     ).length;
 
-    document.getElementById('dashHeroLabel').textContent = t('Total Principal');
-    document.getElementById('dashHeroValue').textContent = fmtMoneyWhole(totalPrincipal);
-    const investorCountSuffix = investorLang === 'hi' ? '' : (activeInvestors.length===1 ? '' : 's');
-    document.getElementById('dashHeroFoot').textContent = `${activeInvestors.length} ${t('active investor')}${investorCountSuffix} · ${t('avg ROI')} ${avgRoi.toFixed(2)}%`;
-
+    document.getElementById('dashHero').style.display = 'none';
+    // Total Principal (hero) and Total Amount Invested (chip) were
+    // showing the exact same number under two different labels — a
+    // real redundancy, not just a naming clash. Rather than relabel
+    // one of them, the hero is dropped entirely for Investor Mode and
+    // every figure lives as one equal-weight chip, in this order:
+    // investor count, principal invested, interest accrued, the two
+    // combined, then investors with nothing invested yet.
     const investorChips = [
       [t('Active Investors'), activeInvestors.length, false, 'active-investors'],
       [t('Total Amount Invested'), fmtMoneyWhole(totalPrincipal), false, 'amount-invested'],
       [t('Total Accrued Interest'), fmtMoneyWhole(totalAccrued), false, 'accrued-interest'],
+      [t('Total Value (Principal + Interest)'), fmtMoneyWhole(totalPrincipal + totalAccrued), false, 'total-value'],
       [t('Investors with No Investment'), investorsWithoutAccount, investorsWithoutAccount>0, 'no-investment']
     ];
     document.getElementById('dashMetrics').innerHTML = investorChips.map(([label,value,isNeg,drillKey])=>
@@ -8522,6 +8548,7 @@ function renderDashboard(){
       }
     });
 
+    document.getElementById('dashHero').style.display = '';
     document.getElementById('dashHeroLabel').textContent = 'Outstanding';
     document.getElementById('dashHeroValue').textContent = fmtMoneyWhole(totalOutstanding);
     document.getElementById('dashHeroFoot').textContent = `across ${activeLoans.length} active loan${activeLoans.length===1?'':'s'} · ${activeBorrowers.length} active borrower${activeBorrowers.length===1?'':'s'}`;
@@ -9248,12 +9275,67 @@ function openInvestorDrillDownModal(key, data){
       </tr>`;
     });
   } else if (key === 'amount-invested'){
-    titleEl.textContent = 'Total Amount Invested';
-    bodyEl.innerHTML = tableHtml(data.activeAccounts, ['Investor', 'Account No.', 'Opened', 'Principal'], a=>{
+    titleEl.textContent = 'All Investments';
+    // Every account, tagged with its actual investment type (plain /
+    // Regular Monthly / Monthly Interest Payout / Payout at Maturity)
+    // so it can be filtered like the loan-type chips elsewhere in the
+    // app, instead of a flat undifferentiated list of every account.
+    const rowsWithType = data.activeAccounts.map(a=>{
       const inv = data.activeInvestors.find(i=> i.id === a.investorId);
-      return `<tr class="drill-table-row" data-drill-investor-id="${a.investorId}">
-        <td>${escapeHtml(inv ? inv.name : '(unknown)')}</td><td>${escapeHtml(a.accountNo)}</td><td>${fmtDate(a.openingDate)}</td><td>${fmtMoneyWhole(a.runningBalance)}</td>
-      </tr>`;
+      const rp = state.recurringPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
+      const fp = state.fdPlans.find(p=> String(p.accountId)===String(a.id) && p.status==='ACTIVE');
+      let type = 'ONE_TIME', typeLabel = 'One Time', detail = '—';
+      if (rp){ type='RECURRING'; typeLabel='Regular Monthly'; detail = `₹${Number(rp.monthlyAmount).toLocaleString('en-IN')}/mo · due ${rp.contributionDay}${ordinalSuffix(rp.contributionDay)}`; }
+      else if (fp && fp.planType==='MONTHLY_PAYOUT'){ type='MONTHLY_PAYOUT'; typeLabel='Monthly Payout'; detail = `₹${Number(fp.nextPayoutAmount||0).toLocaleString('en-IN',{maximumFractionDigits:0})}/mo · due ${fp.payoutDay}${ordinalSuffix(fp.payoutDay)}`; }
+      else if (fp && fp.planType==='MATURITY_PAYOUT'){ type='MATURITY_PAYOUT'; typeLabel='At Maturity'; detail = `matures ${fmtDate(fp.maturityDate)}`; }
+      return { a, inv, type, typeLabel, detail };
+    });
+
+    const typeCounts = { ALL: rowsWithType.length };
+    ['ONE_TIME','RECURRING','MONTHLY_PAYOUT','MATURITY_PAYOUT'].forEach(k=>{
+      typeCounts[k] = rowsWithType.filter(r=> r.type===k).length;
+    });
+    const chipDefs = [
+      ['ALL','All'], ['ONE_TIME','One Time'], ['RECURRING','Regular Monthly'],
+      ['MONTHLY_PAYOUT','Monthly Payout'], ['MATURITY_PAYOUT','At Maturity']
+    ];
+
+    const renderFilteredTable = (filter)=>{
+      const filtered = filter==='ALL' ? rowsWithType : rowsWithType.filter(r=> r.type===filter);
+      if (!filtered.length) return '<div class="empty-state">Nothing to show.</div>';
+      // Compact list, Type leading each row (not a wide table column) —
+      // account numbers are internal bookkeeping and add no value here,
+      // so they're dropped entirely from this view.
+      const typeColor = { ONE_TIME: 'var(--muted)', RECURRING: 'var(--accent-pool-1,#2563eb)', MONTHLY_PAYOUT: '#7c3aed', MATURITY_PAYOUT: '#7c3aed' };
+      return `<div class="investment-type-list">` + filtered.map(r=> `
+        <div class="investment-type-row">
+          <span class="investment-type-tag" style="background:${typeColor[r.type]};">${r.typeLabel}</span>
+          <span class="investment-type-name" data-drill-investor-id="${r.a.investorId}">${escapeHtml(r.inv ? r.inv.name : '(unknown)')}</span>
+          <span class="investment-type-principal">${fmtMoneyWhole(r.a.runningBalance)}</span>
+          <span class="investment-type-detail">${r.detail}</span>
+        </div>`).join('') + `</div>`;
+    };
+
+    bodyEl.innerHTML = `
+      <div class="filter-pill-row" id="investmentTypeFilter">
+        ${chipDefs.map(([k,label])=> `<button type="button" class="filter-pill investment-type-filter-btn${k==='ALL'?' active':''}" data-filter="${k}">${label} (${typeCounts[k]})</button>`).join('')}
+      </div>
+      <div id="investmentTypeTableWrap">${renderFilteredTable('ALL')}</div>
+    `;
+    bodyEl.querySelectorAll('.investment-type-filter-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        bodyEl.querySelectorAll('.investment-type-filter-btn').forEach(b=> b.classList.remove('active'));
+        btn.classList.add('active');
+        const wrap = document.getElementById('investmentTypeTableWrap');
+        wrap.innerHTML = renderFilteredTable(btn.dataset.filter);
+        wrap.querySelectorAll('[data-drill-investor-id]').forEach(row=>{
+          row.addEventListener('click', ()=>{
+            document.getElementById('drillDownModal').classList.remove('show');
+            showScreen('investor-profile');
+            openInvestorProfile(row.dataset.drillInvestorId);
+          });
+        });
+      });
     });
   } else if (key === 'accrued-interest'){
     titleEl.textContent = 'Total Accrued Interest';
@@ -9262,6 +9344,15 @@ function openInvestorDrillDownModal(key, data){
       const inv = data.activeInvestors.find(i=> i.id === a.investorId);
       return `<tr class="drill-table-row" data-drill-investor-id="${a.investorId}">
         <td>${escapeHtml(inv ? inv.name : '(unknown)')}</td><td>${fmtDate(a.openingDate)}</td><td>${fmtMoneyWhole(a.runningBalance)}</td><td>${Number(a.roi).toFixed(2)}%</td><td>${fmtMoneyWhole(a.accruedInterest)}</td>
+      </tr>`;
+    });
+  } else if (key === 'total-value'){
+    titleEl.textContent = 'Total Value (Principal + Interest)';
+    bodyEl.innerHTML = tableHtml(data.activeAccounts, ['Investor', 'Principal', 'Interest', 'Total Value'], a=>{
+      const inv = data.activeInvestors.find(i=> i.id === a.investorId);
+      const total = Number(a.runningBalance||0) + Number(a.accruedInterest||0);
+      return `<tr class="drill-table-row" data-drill-investor-id="${a.investorId}">
+        <td>${escapeHtml(inv ? inv.name : '(unknown)')}</td><td>${fmtMoneyWhole(a.runningBalance)}</td><td>${fmtMoneyWhole(a.accruedInterest)}</td><td>${fmtMoneyWhole(total)}</td>
       </tr>`;
     });
   } else if (key === 'no-investment'){
