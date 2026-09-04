@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FinSphere v2.21 &mdash; Borrow • Invest • Grow</title>
+<title>FinSphere v2.22 &mdash; Borrow • Invest • Grow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Poppins:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
@@ -3384,6 +3384,21 @@
   </div>
 </div>
 
+<!-- Shown when picking Regular Monthly Investment / Monthly Interest
+     Payout for an investor who already has one active — offers to jump
+     straight to recording this period's payment instead of assuming a
+     brand-new plan is wanted. -->
+<div class="modal-overlay" id="existingPlanRedirectModal">
+  <div class="modal">
+    <h3>Already Paying This</h3>
+    <p class="sub" id="existingPlanRedirectText" style="margin:0 0 1rem;"></p>
+    <div class="modal-close-row">
+      <button class="btn secondary" id="btnExistingPlanRedirectNew">Start a New One Anyway</button>
+      <button class="btn" id="btnExistingPlanRedirectGo">Yes, Record It Now</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="fdPayoutModal">
   <div class="modal">
     <h3>Record Monthly Payout</h3>
@@ -3451,6 +3466,181 @@
     <div class="modal-close-row">
       <button class="btn secondary" id="btnFdMaturityCancel">Cancel</button>
       <button class="btn" id="btnFdMaturitySave">Confirm Payout</button>
+    </div>
+  </div>
+</div>
+
+<!-- Withdrawal from a Regular Monthly Investment (RD-style) account —
+     offers Partial (plan keeps running) or Break (closes it entirely). -->
+<div class="modal-overlay" id="recurringWithdrawModal">
+  <div class="modal">
+    <h3>Withdraw Money</h3>
+    <p class="sub" id="rwPlanLabel" style="margin:0 0 1rem;"></p>
+    <div class="icon-tile-row" id="rwChoiceRow">
+      <button type="button" class="icon-tile" id="rwPickPartial">
+        <span class="icon-tile-circle">➗</span>
+        <span class="icon-tile-label">Take Out Some Money</span>
+      </button>
+      <button type="button" class="icon-tile" id="rwPickBreak">
+        <span class="icon-tile-circle">🛑</span>
+        <span class="icon-tile-label">Close This Completely</span>
+      </button>
+    </div>
+
+    <div id="rwPartialSection" style="display:none;">
+      <p class="hint" id="rwPartialHint"></p>
+      <div class="metrics">
+        <div class="metric"><div class="label">Current Value</div><div class="value" id="rwPartialCurrentValue">—</div></div>
+      </div>
+      <label for="rwPartialAmount">How Much to Take Out (Rs.)</label>
+      <input type="number" id="rwPartialAmount" min="0.01" step="0.01">
+      <label for="rwPartialDate">Date</label>
+      <input type="date" id="rwPartialDate">
+      <label for="rwPartialPaymentMode">Mode of Payment</label>
+      <select id="rwPartialPaymentMode">
+        <option value="">Select mode&hellip;</option>
+        <option value="Cash">Cash</option>
+        <option value="Cheque">Cheque</option>
+        <option value="UPI">UPI</option>
+        <option value="Bank Transfer">Bank Transfer</option>
+        <option value="NEFT">NEFT</option>
+        <option value="RTGS">RTGS</option>
+        <option value="IMPS">IMPS</option>
+      </select>
+      <label>Pay Out From Pool(s)</label>
+      <button type="button" class="alloc-modal-trigger" id="rwPartialAllocTrigger">
+        <span id="rwPartialAllocSummary">No pool(s) selected yet.</span>
+        <span class="chip">Select Pool</span>
+      </button>
+      <div id="rwPartialAllocInline" style="display:none;"></div>
+      <div class="error-text" id="rwPartialModalError"></div>
+      <div class="modal-close-row">
+        <button class="btn secondary" id="btnRwPartialBack">Back</button>
+        <button class="btn" id="btnRwPartialSave">Take Out Money</button>
+      </div>
+    </div>
+
+    <div id="rwBreakSection" style="display:none;">
+      <p class="hint">This stops her monthly payments completely and closes this account for good.</p>
+      <div class="metrics">
+        <div class="metric"><div class="label">She Will Get</div><div class="value" id="rwBreakAmount">—</div></div>
+      </div>
+      <label for="rwBreakDate">Date</label>
+      <input type="date" id="rwBreakDate">
+      <label for="rwBreakPaymentMode">Mode of Payment</label>
+      <select id="rwBreakPaymentMode">
+        <option value="">Select mode&hellip;</option>
+        <option value="Cash">Cash</option>
+        <option value="Cheque">Cheque</option>
+        <option value="UPI">UPI</option>
+        <option value="Bank Transfer">Bank Transfer</option>
+        <option value="NEFT">NEFT</option>
+        <option value="RTGS">RTGS</option>
+        <option value="IMPS">IMPS</option>
+      </select>
+      <label>Pay Out From Pool(s)</label>
+      <button type="button" class="alloc-modal-trigger" id="rwBreakAllocTrigger">
+        <span id="rwBreakAllocSummary">No pool(s) selected yet.</span>
+        <span class="chip">Select Pool</span>
+      </button>
+      <div id="rwBreakAllocInline" style="display:none;"></div>
+      <div class="error-text" id="rwBreakModalError"></div>
+      <div class="modal-close-row">
+        <button class="btn secondary" id="btnRwBreakBack">Back</button>
+        <button class="btn danger" id="btnRwBreakSave">Close It & Pay Her</button>
+      </div>
+    </div>
+
+    <div class="modal-close-row" id="rwChoiceCancelRow">
+      <button class="btn secondary" id="btnRwCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Withdrawal from an FD-style plan (Monthly Interest Payout OR
+     Payout at Maturity) — same two-way choice, plain wording adapts
+     to which type it is via JS. -->
+<div class="modal-overlay" id="fdWithdrawModal">
+  <div class="modal">
+    <h3>Withdraw Money</h3>
+    <p class="sub" id="fwPlanLabel" style="margin:0 0 1rem;"></p>
+    <div class="icon-tile-row" id="fwChoiceRow">
+      <button type="button" class="icon-tile" id="fwPickPartial">
+        <span class="icon-tile-circle">➗</span>
+        <span class="icon-tile-label">Take Out Some Money</span>
+      </button>
+      <button type="button" class="icon-tile" id="fwPickClose">
+        <span class="icon-tile-circle">🛑</span>
+        <span class="icon-tile-label">Close This Completely</span>
+      </button>
+    </div>
+
+    <div id="fwPartialSection" style="display:none;">
+      <p class="hint" id="fwPartialHint"></p>
+      <div class="metrics">
+        <div class="metric"><div class="label">Current Principal</div><div class="value" id="fwPartialPrincipalValue">—</div></div>
+      </div>
+      <label for="fwPartialAmount">How Much to Take Out (Rs.)</label>
+      <input type="number" id="fwPartialAmount" min="0.01" step="0.01">
+      <label for="fwPartialDate">Date</label>
+      <input type="date" id="fwPartialDate">
+      <label for="fwPartialPaymentMode">Mode of Payment</label>
+      <select id="fwPartialPaymentMode">
+        <option value="">Select mode&hellip;</option>
+        <option value="Cash">Cash</option>
+        <option value="Cheque">Cheque</option>
+        <option value="UPI">UPI</option>
+        <option value="Bank Transfer">Bank Transfer</option>
+        <option value="NEFT">NEFT</option>
+        <option value="RTGS">RTGS</option>
+        <option value="IMPS">IMPS</option>
+      </select>
+      <label>Pay Out From Pool(s)</label>
+      <button type="button" class="alloc-modal-trigger" id="fwPartialAllocTrigger">
+        <span id="fwPartialAllocSummary">No pool(s) selected yet.</span>
+        <span class="chip">Select Pool</span>
+      </button>
+      <div id="fwPartialAllocInline" style="display:none;"></div>
+      <div class="error-text" id="fwPartialModalError"></div>
+      <div class="modal-close-row">
+        <button class="btn secondary" id="btnFwPartialBack">Back</button>
+        <button class="btn" id="btnFwPartialSave">Take Out Money</button>
+      </div>
+    </div>
+
+    <div id="fwCloseSection" style="display:none;">
+      <p class="hint" id="fwCloseHint"></p>
+      <div class="metrics">
+        <div class="metric"><div class="label">Total Payable</div><div class="value" id="fwCloseAmount">—</div></div>
+      </div>
+      <label for="fwCloseDate">Date</label>
+      <input type="date" id="fwCloseDate">
+      <label for="fwClosePaymentMode">Mode of Payment</label>
+      <select id="fwClosePaymentMode">
+        <option value="">Select mode&hellip;</option>
+        <option value="Cash">Cash</option>
+        <option value="Cheque">Cheque</option>
+        <option value="UPI">UPI</option>
+        <option value="Bank Transfer">Bank Transfer</option>
+        <option value="NEFT">NEFT</option>
+        <option value="RTGS">RTGS</option>
+        <option value="IMPS">IMPS</option>
+      </select>
+      <label>Pay Out From Pool(s)</label>
+      <button type="button" class="alloc-modal-trigger" id="fwCloseAllocTrigger">
+        <span id="fwCloseAllocSummary">No pool(s) selected yet.</span>
+        <span class="chip">Select Pool</span>
+      </button>
+      <div id="fwCloseAllocInline" style="display:none;"></div>
+      <div class="error-text" id="fwCloseModalError"></div>
+      <div class="modal-close-row">
+        <button class="btn secondary" id="btnFwCloseBack">Back</button>
+        <button class="btn danger" id="btnFwCloseSave">Close It & Pay</button>
+      </div>
+    </div>
+
+    <div class="modal-close-row" id="fwChoiceCancelRow">
+      <button class="btn secondary" id="btnFwCancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -4482,7 +4672,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'v2.21';
+const APP_VERSION = 'v2.22';
 
 // ---- Investor Mode Hindi/English toggle ----
 // Investor and account NAMES are data the user entered and are never
@@ -5041,6 +5231,10 @@ const RPC_MAP = {
   getAllFdPlans: 'get_all_fd_plans',
   recordFdPayout: 'record_fd_payout',
   closeFdMaturity: 'close_fd_maturity',
+  breakRecurringPlan: 'break_recurring_plan',
+  partialWithdrawRecurring: 'partial_withdraw_recurring',
+  closeFdPlanEarly: 'close_fd_plan_early',
+  partialWithdrawFd: 'partial_withdraw_fd',
   getInvestorDues: 'get_investor_dues',
   assignBahiNo: 'assign_bahi_no',
   editBahiNo: 'edit_bahi_no',
@@ -5112,7 +5306,8 @@ const ADMIN_ONLY_ACTIONS = new Set([
   'addInvestment','withdraw','editTransaction','deleteTransaction',
   'deleteAccount','getReportAsOf',
   'addRecurringPlan','processDueContributions','recurringPayInterest','recurringReinvestInterest',
-  'addFdPlan','recordFdPayout','closeFdMaturity'
+  'addFdPlan','recordFdPayout','closeFdMaturity',
+  'breakRecurringPlan','partialWithdrawRecurring','closeFdPlanEarly','partialWithdrawFd'
 ]);
 
 // A Field Agent session may only ever call these — everything else
@@ -13117,6 +13312,41 @@ function openRecurringPlanModal(){
     }
   });
 }
+let existingPlanRedirectCallbacks = { onGo: null, onNew: null };
+function showExistingPlanRedirect({ text, onGo, onNew }){
+  document.getElementById('existingPlanRedirectText').textContent = text;
+  existingPlanRedirectCallbacks = { onGo, onNew };
+  document.getElementById('existingPlanRedirectModal').classList.add('show');
+}
+document.getElementById('btnExistingPlanRedirectGo').addEventListener('click', ()=>{
+  document.getElementById('existingPlanRedirectModal').classList.remove('show');
+  if (existingPlanRedirectCallbacks.onGo) existingPlanRedirectCallbacks.onGo();
+});
+document.getElementById('btnExistingPlanRedirectNew').addEventListener('click', ()=>{
+  document.getElementById('existingPlanRedirectModal').classList.remove('show');
+  if (existingPlanRedirectCallbacks.onNew) existingPlanRedirectCallbacks.onNew();
+});
+
+document.getElementById('rpInvestor').addEventListener('change', function(){
+  const investorId = this.value;
+  if (!investorId) return;
+  const existing = state.recurringPlans.find(p=> String(p.investorId)===String(investorId) && p.status==='ACTIVE');
+  if (existing){
+    closeRecurringPlanModal();
+    showExistingPlanRedirect({
+      text: `${existing.investorName || existing.investorId} already pays ₹${Number(existing.monthlyAmount).toLocaleString('en-IN')} every month, on the ${existing.contributionDay}${ordinalSuffix(existing.contributionDay)}. Do you want to record this month's payment now?`,
+      onGo: ()=>{
+        const acc = state.accounts.find(a=> String(a.id)===String(existing.accountId));
+        showScreen('investors');
+        showSubScreen('inv-deposits');
+        document.querySelectorAll('[data-subscreen]').forEach(b=> b.classList.toggle('active', b.id==='btnNewInvestmentTile'));
+        renderInvestmentForm(investorId);
+        if (acc) setTopUpMode(acc.id, acc.accountNo);
+      },
+      onNew: ()=> openRecurringPlanModal()
+    });
+  }
+});
 function closeRecurringPlanModal(){
   document.getElementById('recurringPlanModal').classList.remove('show');
 }
@@ -13204,6 +13434,22 @@ function closeFdPlanModal(){
 }
 document.getElementById('btnFdPlanCancel').addEventListener('click', closeFdPlanModal);
 document.getElementById('fdPrincipal').addEventListener('input', ()=>{ if (fdAllocPicker) fdAllocPicker.refresh(); });
+document.getElementById('fdInvestor').addEventListener('change', function(){
+  const investorId = this.value;
+  if (!investorId || fdPlanModalType !== 'MONTHLY_PAYOUT') return;
+  const existing = state.fdPlans.find(p=> String(p.investorId)===String(investorId) && p.status==='ACTIVE' && p.planType==='MONTHLY_PAYOUT');
+  if (existing){
+    closeFdPlanModal();
+    showExistingPlanRedirect({
+      text: `${existing.investorName || existing.investorId} already gets ₹${Number(existing.nextPayoutAmount||0).toLocaleString('en-IN',{maximumFractionDigits:0})} every month, on the ${existing.payoutDay}${ordinalSuffix(existing.payoutDay)}. Do you want to record this month's payout now?`,
+      onGo: ()=>{
+        showScreen('investors');
+        openFdPayoutModal(existing);
+      },
+      onNew: ()=> openFdPlanModal('MONTHLY_PAYOUT')
+    });
+  }
+});
 
 document.getElementById('btnFdPlanSave').addEventListener('click', async ()=>{
   const errEl = document.getElementById('fdPlanModalError');
@@ -13352,6 +13598,256 @@ document.getElementById('btnFdMaturitySave').addEventListener('click', async ()=
     errEl.textContent = err.message;
   }
 });
+
+// ---- Withdraw from a Regular Monthly Investment plan ----
+
+let rwTargetPlan = null;
+let rwPartialAllocPicker = null;
+let rwBreakAllocPicker = null;
+
+function openRecurringWithdrawModal(planId){
+  rwTargetPlan = state.recurringPlans.find(p=> String(p.id)===String(planId));
+  if (!rwTargetPlan) return;
+  const acc = state.accounts.find(a=> String(a.id)===String(rwTargetPlan.accountId));
+  document.getElementById('rwPlanLabel').textContent =
+    `${rwTargetPlan.investorName || rwTargetPlan.investorId} — ${acc ? acc.accountNo : ''} (₹${Number(rwTargetPlan.monthlyAmount).toLocaleString('en-IN')}/month)`;
+  document.getElementById('rwChoiceRow').style.display = '';
+  document.getElementById('rwChoiceCancelRow').style.display = '';
+  document.getElementById('rwPartialSection').style.display = 'none';
+  document.getElementById('rwBreakSection').style.display = 'none';
+  document.getElementById('recurringWithdrawModal').classList.add('show');
+}
+function closeRecurringWithdrawModal(){
+  document.getElementById('recurringWithdrawModal').classList.remove('show');
+}
+document.getElementById('btnRwCancel').addEventListener('click', closeRecurringWithdrawModal);
+
+document.getElementById('rwPickPartial').addEventListener('click', ()=>{
+  const acc = state.accounts.find(a=> String(a.id)===String(rwTargetPlan.accountId));
+  document.getElementById('rwChoiceRow').style.display = 'none';
+  document.getElementById('rwChoiceCancelRow').style.display = 'none';
+  document.getElementById('rwPartialSection').style.display = '';
+  document.getElementById('rwPartialHint').textContent =
+    `Her monthly payment of ₹${Number(rwTargetPlan.monthlyAmount).toLocaleString('en-IN')} keeps going as usual — only this account's balance goes down.`;
+  document.getElementById('rwPartialCurrentValue').textContent = acc ? fmtMoney(Number(acc.currentValue)) : '—';
+  document.getElementById('rwPartialAmount').value = '';
+  document.getElementById('rwPartialDate').value = todayISO();
+  document.getElementById('rwPartialPaymentMode').value = '';
+  document.getElementById('rwPartialModalError').textContent = '';
+  ensurePoolAccountsLoaded(true).then(()=>{
+    if (!state.poolAccounts.length) return;
+    if (!rwPartialAllocPicker){
+      rwPartialAllocPicker = createAllocationInline(
+        document.getElementById('rwPartialAllocTrigger'),
+        document.getElementById('rwPartialAllocInline'),
+        ()=> Number(document.getElementById('rwPartialAmount').value || 0),
+        document.getElementById('rwPartialAllocSummary'), 'OUT'
+      );
+    } else rwPartialAllocPicker.refresh();
+  });
+});
+document.getElementById('rwPartialAmount').addEventListener('input', ()=>{ if (rwPartialAllocPicker) rwPartialAllocPicker.refresh(); });
+document.getElementById('btnRwPartialBack').addEventListener('click', ()=>{
+  document.getElementById('rwPartialSection').style.display = 'none';
+  document.getElementById('rwChoiceRow').style.display = '';
+  document.getElementById('rwChoiceCancelRow').style.display = '';
+});
+document.getElementById('btnRwPartialSave').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('rwPartialModalError');
+  errEl.textContent = '';
+  const amount = parseFloat(document.getElementById('rwPartialAmount').value);
+  const date = document.getElementById('rwPartialDate').value;
+  const paymentMode = document.getElementById('rwPartialPaymentMode').value;
+  if (!(amount > 0)){ errEl.textContent = 'Enter a valid amount.'; return; }
+  if (!date){ errEl.textContent = 'Select a date.'; return; }
+  if (!rwPartialAllocPicker || !rwPartialAllocPicker.isValid()){ errEl.textContent = 'Pool allocations must add up to the amount.'; return; }
+  try{
+    const res = await apiPost('partialWithdrawRecurring', {
+      recurringPlanId: rwTargetPlan.id, amount, date, paymentMode,
+      poolAllocations: rwPartialAllocPicker.getAllocations()
+    });
+    if (res && res.error){ errEl.textContent = res.error; return; }
+    closeRecurringWithdrawModal();
+    toast(`${fmtMoney(amount)} paid out — her monthly plan continues as before.`);
+    await refreshRecurringPlans();
+    await refreshAll(false);
+  }catch(err){ errEl.textContent = err.message; }
+});
+
+document.getElementById('rwPickBreak').addEventListener('click', ()=>{
+  document.getElementById('rwChoiceRow').style.display = 'none';
+  document.getElementById('rwChoiceCancelRow').style.display = 'none';
+  document.getElementById('rwBreakSection').style.display = '';
+  const acc = state.accounts.find(a=> String(a.id)===String(rwTargetPlan.accountId));
+  document.getElementById('rwBreakAmount').textContent = acc ? fmtMoney(Number(acc.currentValue)) : '—';
+  document.getElementById('rwBreakDate').value = todayISO();
+  document.getElementById('rwBreakPaymentMode').value = '';
+  document.getElementById('rwBreakModalError').textContent = '';
+  ensurePoolAccountsLoaded(true).then(()=>{
+    if (!state.poolAccounts.length) return;
+    if (!rwBreakAllocPicker){
+      rwBreakAllocPicker = createAllocationInline(
+        document.getElementById('rwBreakAllocTrigger'),
+        document.getElementById('rwBreakAllocInline'),
+        ()=> acc ? Number(acc.currentValue) : 0,
+        document.getElementById('rwBreakAllocSummary'), 'OUT'
+      );
+    } else rwBreakAllocPicker.refresh();
+  });
+});
+document.getElementById('btnRwBreakBack').addEventListener('click', ()=>{
+  document.getElementById('rwBreakSection').style.display = 'none';
+  document.getElementById('rwChoiceRow').style.display = '';
+  document.getElementById('rwChoiceCancelRow').style.display = '';
+});
+document.getElementById('btnRwBreakSave').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('rwBreakModalError');
+  errEl.textContent = '';
+  const date = document.getElementById('rwBreakDate').value;
+  const paymentMode = document.getElementById('rwBreakPaymentMode').value;
+  if (!date){ errEl.textContent = 'Select a date.'; return; }
+  if (!rwBreakAllocPicker || !rwBreakAllocPicker.isValid()){ errEl.textContent = 'Pool allocations must add up to the full amount.'; return; }
+  try{
+    const res = await apiPost('breakRecurringPlan', {
+      recurringPlanId: rwTargetPlan.id, date, paymentMode,
+      poolAllocations: rwBreakAllocPicker.getAllocations()
+    });
+    if (res && res.error){ errEl.textContent = res.error; return; }
+    closeRecurringWithdrawModal();
+    toast(`${fmtMoney(res.amount)} paid out — plan closed.`);
+    await refreshRecurringPlans();
+    await refreshInvestorDues();
+    await refreshAll(false);
+  }catch(err){ errEl.textContent = err.message; }
+});
+
+// ---- Withdraw from an FD-style plan (Monthly Payout or Maturity) ----
+
+let fwTargetPlan = null;
+let fwPartialAllocPicker = null;
+let fwCloseAllocPicker = null;
+
+function openFdWithdrawModal(planId){
+  fwTargetPlan = state.fdPlans.find(p=> String(p.id)===String(planId));
+  if (!fwTargetPlan) return;
+  const acc = state.accounts.find(a=> String(a.id)===String(fwTargetPlan.accountId));
+  const isMonthly = fwTargetPlan.planType === 'MONTHLY_PAYOUT';
+  document.getElementById('fwPlanLabel').textContent =
+    `${fwTargetPlan.investorName || fwTargetPlan.investorId} — ${acc ? acc.accountNo : ''} (${isMonthly ? 'Monthly Payout' : 'Payout at Maturity'})`;
+  document.getElementById('fwChoiceRow').style.display = '';
+  document.getElementById('fwChoiceCancelRow').style.display = '';
+  document.getElementById('fwPartialSection').style.display = 'none';
+  document.getElementById('fwCloseSection').style.display = 'none';
+  document.getElementById('fdWithdrawModal').classList.add('show');
+}
+function closeFdWithdrawModal(){
+  document.getElementById('fdWithdrawModal').classList.remove('show');
+}
+document.getElementById('btnFwCancel').addEventListener('click', closeFdWithdrawModal);
+
+document.getElementById('fwPickPartial').addEventListener('click', ()=>{
+  const isMonthly = fwTargetPlan.planType === 'MONTHLY_PAYOUT';
+  document.getElementById('fwChoiceRow').style.display = 'none';
+  document.getElementById('fwChoiceCancelRow').style.display = 'none';
+  document.getElementById('fwPartialSection').style.display = '';
+  document.getElementById('fwPartialHint').textContent = isMonthly
+    ? 'This lowers the amount he gets every month from now on — any interest already built up till today is paid to him along with this.'
+    : 'This lowers what he will get in the end — any interest already built up till today is paid to him along with this.';
+  document.getElementById('fwPartialPrincipalValue').textContent = fmtMoney(Number(fwTargetPlan.principal));
+  document.getElementById('fwPartialAmount').value = '';
+  document.getElementById('fwPartialDate').value = todayISO();
+  document.getElementById('fwPartialPaymentMode').value = '';
+  document.getElementById('fwPartialModalError').textContent = '';
+  ensurePoolAccountsLoaded(true).then(()=>{
+    if (!state.poolAccounts.length) return;
+    if (!fwPartialAllocPicker){
+      fwPartialAllocPicker = createAllocationInline(
+        document.getElementById('fwPartialAllocTrigger'),
+        document.getElementById('fwPartialAllocInline'),
+        ()=> Number(document.getElementById('fwPartialAmount').value || 0) + Number(fwTargetPlan.accruedInterest || 0),
+        document.getElementById('fwPartialAllocSummary'), 'OUT'
+      );
+    } else fwPartialAllocPicker.refresh();
+  });
+});
+document.getElementById('fwPartialAmount').addEventListener('input', ()=>{ if (fwPartialAllocPicker) fwPartialAllocPicker.refresh(); });
+document.getElementById('btnFwPartialBack').addEventListener('click', ()=>{
+  document.getElementById('fwPartialSection').style.display = 'none';
+  document.getElementById('fwChoiceRow').style.display = '';
+  document.getElementById('fwChoiceCancelRow').style.display = '';
+});
+document.getElementById('btnFwPartialSave').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('fwPartialModalError');
+  errEl.textContent = '';
+  const amount = parseFloat(document.getElementById('fwPartialAmount').value);
+  const date = document.getElementById('fwPartialDate').value;
+  const paymentMode = document.getElementById('fwPartialPaymentMode').value;
+  if (!(amount > 0)){ errEl.textContent = 'Enter a valid amount.'; return; }
+  if (!date){ errEl.textContent = 'Select a date.'; return; }
+  if (!fwPartialAllocPicker || !fwPartialAllocPicker.isValid()){ errEl.textContent = 'Pool allocations must add up to the total being paid.'; return; }
+  try{
+    const res = await apiPost('partialWithdrawFd', {
+      fdPlanId: fwTargetPlan.id, amount, date, paymentMode,
+      poolAllocations: fwPartialAllocPicker.getAllocations()
+    });
+    if (res && res.error){ errEl.textContent = res.error; return; }
+    closeFdWithdrawModal();
+    toast(`Paid out — remaining amount is now ${fmtMoney(res.newPrincipal)}.`);
+    await refreshFdPlans();
+    await refreshAll(false);
+  }catch(err){ errEl.textContent = err.message; }
+});
+
+document.getElementById('fwPickClose').addEventListener('click', ()=>{
+  const isMonthly = fwTargetPlan.planType === 'MONTHLY_PAYOUT';
+  document.getElementById('fwChoiceRow').style.display = 'none';
+  document.getElementById('fwChoiceCancelRow').style.display = 'none';
+  document.getElementById('fwCloseSection').style.display = '';
+  document.getElementById('fwCloseHint').textContent = isMonthly
+    ? 'This stops his monthly payments completely and closes this account for good.'
+    : 'This pays him everything now instead of waiting for the usual date, and closes this account.';
+  document.getElementById('fwCloseAmount').textContent = fmtMoney(Number(fwTargetPlan.currentValue || 0));
+  document.getElementById('fwCloseDate').value = todayISO();
+  document.getElementById('fwClosePaymentMode').value = '';
+  document.getElementById('fwCloseModalError').textContent = '';
+  ensurePoolAccountsLoaded(true).then(()=>{
+    if (!state.poolAccounts.length) return;
+    if (!fwCloseAllocPicker){
+      fwCloseAllocPicker = createAllocationInline(
+        document.getElementById('fwCloseAllocTrigger'),
+        document.getElementById('fwCloseAllocInline'),
+        ()=> Number(fwTargetPlan.currentValue || 0),
+        document.getElementById('fwCloseAllocSummary'), 'OUT'
+      );
+    } else fwCloseAllocPicker.refresh();
+  });
+});
+document.getElementById('btnFwCloseBack').addEventListener('click', ()=>{
+  document.getElementById('fwCloseSection').style.display = 'none';
+  document.getElementById('fwChoiceRow').style.display = '';
+  document.getElementById('fwChoiceCancelRow').style.display = '';
+});
+document.getElementById('btnFwCloseSave').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('fwCloseModalError');
+  errEl.textContent = '';
+  const date = document.getElementById('fwCloseDate').value;
+  const paymentMode = document.getElementById('fwClosePaymentMode').value;
+  if (!date){ errEl.textContent = 'Select a date.'; return; }
+  if (!fwCloseAllocPicker || !fwCloseAllocPicker.isValid()){ errEl.textContent = 'Pool allocations must add up to the total payable amount.'; return; }
+  try{
+    const res = await apiPost('closeFdPlanEarly', {
+      fdPlanId: fwTargetPlan.id, date, paymentMode,
+      poolAllocations: fwCloseAllocPicker.getAllocations()
+    });
+    if (res && res.error){ errEl.textContent = res.error; return; }
+    closeFdWithdrawModal();
+    toast(`${fmtMoney(res.amount)} paid out — account closed.`);
+    await refreshFdPlans();
+    await refreshInvestorDues();
+    await refreshAll(false);
+  }catch(err){ errEl.textContent = err.message; }
+});
+
 
 // ---- Process Due Contributions modal ----
 
@@ -14709,24 +15205,54 @@ function renderWithdrawAccountList(){
     wrap.innerHTML = '<div class="empty-state">This investor has no active accounts.</div>';
     return;
   }
-  wrap.innerHTML = accs.map(a=> `
-    <label class="account-option" data-account-id="${a.id}">
+  // Every account is shown here regardless of plan type — but a
+  // plan-linked account (Monthly Investment or either FD type) opens
+  // its own dedicated withdrawal window instead of the plain radio +
+  // amount flow below, since "withdrawal" means something different
+  // for each: breaking/closing a plan vs. reducing a flat balance.
+  wrap.innerHTML = accs.map(a=> {
+    const plan = findActiveRecurringPlanForAccount(a.id);
+    const fdPlan = findActiveFdPlanForAccount(a.id);
+    let planBadge = '';
+    if (plan){
+      planBadge = `<span class="tag" style="background:var(--accent-pool-1,#2563eb);color:#fff;margin-right:.4rem;">${t('Monthly')} ₹${Number(plan.monthlyAmount).toLocaleString('en-IN')} · ${t('due')} ${plan.contributionDay}${ordinalSuffix(plan.contributionDay)}</span>`;
+    } else if (fdPlan && fdPlan.planType === 'MONTHLY_PAYOUT'){
+      planBadge = `<span class="tag" style="background:#7c3aed;color:#fff;margin-right:.4rem;">${t('Payout')} ₹${Number(fdPlan.nextPayoutAmount||0).toLocaleString('en-IN',{maximumFractionDigits:0})} · ${t('due')} ${fdPlan.payoutDay}${ordinalSuffix(fdPlan.payoutDay)}</span>`;
+    } else if (fdPlan && fdPlan.planType === 'MATURITY_PAYOUT'){
+      planBadge = `<span class="tag" style="background:#7c3aed;color:#fff;margin-right:.4rem;">${t('Matures')} ${fmtDate(fdPlan.maturityDate)}</span>`;
+    }
+    const linkedPlan = plan || fdPlan;
+    return `
+    <label class="account-option" data-account-id="${a.id}" ${linkedPlan ? `data-plan-type="${plan?'RECURRING':fdPlan.planType}" data-plan-id="${plan?plan.id:fdPlan.id}"` : ''}>
       <span class="a-main">
         <input type="radio" name="wdAccountRadio" value="${a.id}">
         <span>
           <span class="a-no">${a.accountNo}</span><br>
-          <span style="font-size:.78rem;color:var(--muted);">Opened ${fmtDate(a.openingDate)} &middot; ${Number(a.roi).toFixed(2)}% p.a.</span>
+          <span style="font-size:.78rem;color:var(--muted);">${planBadge}${Number(a.roi).toFixed(2)}% p.a. · ${t('opened')} ${fmtDate(a.openingDate)}</span>
         </span>
       </span>
       <span class="a-val">
         <span class="lbl">Current Value</span>${fmtMoney(Number(a.currentValue))}
       </span>
-    </label>`).join('');
+    </label>`;
+  }).join('');
 
   wrap.querySelectorAll('.account-option').forEach(el=>{
     const radio = el.querySelector('input[type="radio"]');
+    const planType = el.dataset.planType;
+    const planId = el.dataset.planId;
     el.addEventListener('click', ()=>{
       radio.checked = true;
+      if (planType){
+        // Plan-linked account: hand off to its dedicated window instead
+        // of the plain withdrawal flow below. Uncheck the radio right
+        // away so the plain form doesn't look like it's mid-selection
+        // while the plan modal is open.
+        radio.checked = false;
+        if (planType === 'RECURRING') openRecurringWithdrawModal(planId);
+        else openFdWithdrawModal(planId);
+        return;
+      }
       wrap.querySelectorAll('.account-option').forEach(o=> o.classList.remove('selected'));
       el.classList.add('selected');
       state.selectedWithdrawAccountId = el.dataset.accountId;
