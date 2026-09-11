@@ -1,7 +1,7 @@
 {
-  "name": "FinSphere",
-  "short_name": "FinSphere",
-  "description": "FinSphere — investor and borrower management software by TP Finance",
+  "name": "TP Finance",
+  "short_name": "TP Finance",
+  "description": "TP Finance — investor and borrower management software",
   "start_url": "./index.html?v=27",
   "scope": "./",
   "display": "standalone",

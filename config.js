@@ -1,5 +1,5 @@
 /**
- * FinSphere — Supabase connection config.
+ * TP Finance — Supabase connection config.
  * Fill these in after creating your Supabase project (see DEPLOY guide,
  * Step 1). Both values are safe to expose client-side: the anon key only
  * grants what your Row Level Security policies allow (see 01_schema_and_functions.sql —
