@@ -3008,30 +3008,14 @@
       </button>
     </div>
 
-    <!-- New Investment: Regular Monthly vs FD-style choice -->
-    <div class="modal-overlay" id="newInvestmentChoiceModal">
-      <div class="modal">
-        <h3 data-i18n="New Investment">New Investment</h3>
-        <p class="sub" style="margin:0 0 1rem;" data-i18n="What type of investment is this?">What type of investment is this?</p>
-        <div class="icon-tile-row">
-          <button type="button" class="icon-tile" id="btnPickMonthly">
-            <span class="icon-tile-circle">🔁</span>
-            <span class="icon-tile-label" data-i18n="Regular Monthly Investment">Regular Monthly Investment</span>
-          </button>
-          <button type="button" class="icon-tile" id="btnPickMonthlyPayout">
-            <span class="icon-tile-circle">💸</span>
-            <span class="icon-tile-label" data-i18n="Monthly Interest Payout">Monthly Interest Payout</span>
-          </button>
-          <button type="button" class="icon-tile" id="btnPickMaturityPayout">
-            <span class="icon-tile-circle">🏁</span>
-            <span class="icon-tile-label" data-i18n="Pay At Maturity">Pay At Maturity</span>
-          </button>
-        </div>
-        <div class="modal-actions" style="margin-top:1rem;">
-          <button class="btn secondary" id="btnNewInvestmentChoiceCancel" data-i18n="Cancel">Cancel</button>
-        </div>
-      </div>
-    </div>
+    <!-- New Investment choice modal moved to top-level (see near
+         bahiNumberModal) -- it used to live here, nested inside
+         #screen-investors, which is display:none whenever any other
+         screen (like Investor Profile) is active. That made the modal
+         silently unclickable/invisible whenever "New Investment" was
+         tapped from a profile page instead of the Investors tab --
+         classList.add('show') succeeded but a display:none ancestor
+         still hid everything inside it. -->
 
     <!-- SUB: Investor Mgmt (list + add) -->
     <div class="subscreen active" id="sub-inv-mgmt">
@@ -5384,6 +5368,30 @@
     </div>
   </div>
 </div>
+<div class="modal-overlay" id="newInvestmentChoiceModal">
+  <div class="modal">
+    <h3 data-i18n="New Investment">New Investment</h3>
+    <p class="sub" style="margin:0 0 1rem;" data-i18n="What type of investment is this?">What type of investment is this?</p>
+    <div class="icon-tile-row">
+      <button type="button" class="icon-tile" id="btnPickMonthly">
+        <span class="icon-tile-circle">🔁</span>
+        <span class="icon-tile-label" data-i18n="Regular Monthly Investment">Regular Monthly Investment</span>
+      </button>
+      <button type="button" class="icon-tile" id="btnPickMonthlyPayout">
+        <span class="icon-tile-circle">💸</span>
+        <span class="icon-tile-label" data-i18n="Monthly Interest Payout">Monthly Interest Payout</span>
+      </button>
+      <button type="button" class="icon-tile" id="btnPickMaturityPayout">
+        <span class="icon-tile-circle">🏁</span>
+        <span class="icon-tile-label" data-i18n="Pay At Maturity">Pay At Maturity</span>
+      </button>
+    </div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn secondary" id="btnNewInvestmentChoiceCancel" data-i18n="Cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="bahiNumberModal">
   <div class="modal" style="max-width:700px;">
     <h3 id="bahiNumberModalTitle">Update Bahi Numbers</h3>
@@ -5723,7 +5731,7 @@ const state = {
 };
 
 let deferredInstallPrompt = null;
-const APP_VERSION = 'v2.97';
+const APP_VERSION = 'v2.98';
 
 // ---- Investor Mode Hindi/English toggle ----
 // Investor and account NAMES are data the user entered and are never
@@ -5830,7 +5838,7 @@ function t(english){
 
 function applyInvestorLanguage(){
   document.body.classList.toggle('lang-hi', investorLang === 'hi');
-  document.querySelectorAll('#screen-investors [data-i18n], #screen-investor-profile [data-i18n], #screen-dashboard [data-i18n]').forEach(el=>{
+  document.querySelectorAll('#screen-investors [data-i18n], #screen-investor-profile [data-i18n], #screen-dashboard [data-i18n], #newInvestmentChoiceModal [data-i18n]').forEach(el=>{
     el.textContent = t(el.dataset.i18n);
   });
   const toggleBtn = document.getElementById('btnLangToggle');
