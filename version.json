@@ -1,0 +1,5 @@
+{
+  "version": "v4.00",
+  "updated": "2026-09-26",
+  "message": "Unified login for everyone (Admin, Investor, Borrower, Agent) via email + 6-digit OTP, replacing the separate Admin-password and Field-Agent-PIN screens; remember-me persists until explicit logout. New User Management mode (first in the mode switcher) for reviewing signups, assigning roles, and linking Investor/Borrower accounts to their real records. Investor Mode retheme: indigo-to-blue gradient identity, amber growth highlights, replacing the old flat blue. Login screen redesigned with a light card and a soft floating-orb animation, independent of the app's dark base theme."
+}
