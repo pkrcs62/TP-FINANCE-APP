@@ -1,5 +1,0 @@
-{
-  "version": "v4.39",
-  "updated": "2026-10-18",
-  "message": "Fix: the Loan Closure / Collect / Fine / Receipt / Statement action bar on the Loan Profile screen was hidden behind the bottom navigation in Borrower Mode; it now sits above it."
-}
