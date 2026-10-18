@@ -1,0 +1,5 @@
+{
+  "version": "v4.42",
+  "updated": "2026-10-18",
+  "message": "Loan Closure (Bullet / Overdraft): type the amount actually paid and tick \"Fully close the loan with this amount\". If the borrower pays 98% or more of the amount due it is a normal CLOSED loan (small discount); below 98% the loan is marked SETTLED and the balance is shown as Written Off — on screen, receipt and closure certificate. Amount due is rounded UP to the next whole rupee. The loan action bar (Collect, Loan Closure, Fine, Receipt, Statement) no longer hides behind the bottom menu in Borrower Mode."
+}
